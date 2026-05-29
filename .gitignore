@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+
+# Project outputs
+outputs/*
+!outputs/.gitkeep
+!outputs/README.md
+
+# Local data exports
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/README.md
+
