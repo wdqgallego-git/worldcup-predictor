@@ -1,4 +1,4 @@
-"""Run historical backtesting from the command line."""
+"""Run final match, tournament, and company-game predictions."""
 
 import sys
 from pathlib import Path
@@ -9,14 +9,16 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from config import FINAL_SIMULATIONS
 from tournament_simulator import validate_2026_format
 
 
 def main() -> None:
     validate_2026_format()
-    print("Historical backtesting skeleton")
-    print("Backtesting implementation will be added after data schemas and model outputs are defined.")
+    print("Final predictions skeleton")
+    print(f"Final simulation budget: up to {FINAL_SIMULATIONS:,}")
 
 
 if __name__ == "__main__":
     main()
+

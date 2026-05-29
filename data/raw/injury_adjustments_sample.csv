@@ -1,0 +1,5 @@
+entity_type,entity_name,team,adjustment,notes
+player,Lionel Messi,Argentina,-0.02,Sample minor uncertainty
+player,Kylian Mbappe,France,0.00,No adjustment
+team,Brazil,Brazil,0.00,No adjustment
+

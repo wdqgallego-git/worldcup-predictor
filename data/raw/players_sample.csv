@@ -1,0 +1,7 @@
+player_id,player_name,team,position,expected_starter,notes
+p001,Lionel Messi,Argentina,FW,true,Sample player
+p002,Kylian Mbappe,France,FW,true,Sample player
+p003,Vinicius Junior,Brazil,FW,true,Sample player
+p004,Emiliano Martinez,Argentina,GK,true,Sample goalkeeper
+p005,Alisson,Brazil,GK,true,Sample goalkeeper
+

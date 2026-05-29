@@ -1,0 +1,5 @@
+player_id,minutes,goals,assists,shots,non_penalty_xg,penalty_goals
+p001,900,8,5,40,6.1,2
+p002,920,10,3,48,8.4,2
+p003,850,6,4,38,5.9,0
+

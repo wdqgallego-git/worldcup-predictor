@@ -16,10 +16,7 @@ venv/
 # Project outputs
 outputs/*
 !outputs/.gitkeep
-!outputs/README.md
 
 # Local data exports
 data/processed/*
 !data/processed/.gitkeep
-!data/processed/README.md
-
