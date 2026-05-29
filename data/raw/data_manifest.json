@@ -2,7 +2,7 @@
   {
     "file_name": "results.csv",
     "source_url": "https://raw.githubusercontent.com/martj42/international_results/master/results.csv",
-    "download_timestamp": "2026-05-29T20:20:24Z",
+    "download_timestamp": "2026-05-29T21:28:19Z",
     "row_count": 49329,
     "columns": [
       "date",
@@ -21,7 +21,7 @@
   {
     "file_name": "shootouts.csv",
     "source_url": "https://raw.githubusercontent.com/martj42/international_results/master/shootouts.csv",
-    "download_timestamp": "2026-05-29T20:20:24Z",
+    "download_timestamp": "2026-05-29T21:28:19Z",
     "row_count": 677,
     "columns": [
       "date",
@@ -36,7 +36,7 @@
   {
     "file_name": "rankings.csv",
     "source_url": "https://raw.githubusercontent.com/Dato-Futbol/fifa-ranking/refs/heads/master/ranking_fifa_historical.csv",
-    "download_timestamp": "2026-05-29T20:20:24Z",
+    "download_timestamp": "2026-05-29T21:28:20Z",
     "row_count": 67894,
     "columns": [
       "team",
@@ -51,21 +51,23 @@
   },
   {
     "file_name": "fixtures.csv",
-    "source_url": "https://worldcup26.ir/api/matches",
-    "download_timestamp": "2026-05-29T20:20:25Z",
-    "row_count": 0,
+    "source_url": "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json",
+    "download_timestamp": "2026-05-29T21:28:20Z",
+    "row_count": 104,
     "columns": [
       "match_id",
       "stage",
+      "round",
       "group",
       "date",
-      "kickoff_time",
-      "venue",
-      "city",
-      "team_1",
-      "team_2"
+      "time",
+      "team_a",
+      "team_b",
+      "ground",
+      "neutral",
+      "source_status"
     ],
-    "sha256_hash": "c344cfdebf5a4d18593e8cd3426ae1433fa23f37eae141abeba1d7995460e327",
-    "notes": "World Cup 2026 fixtures from a public no-key API when available; JSON is normalized without renaming fields. Download failed; empty schema placeholder created."
+    "sha256_hash": "ed750dcb34b2c5fc2aba0c777c61ebde3c213366d485b9ac23c80ef0024f56ff",
+    "notes": "World Cup 2026 fixtures from openfootball/worldcup.json."
   }
 ]

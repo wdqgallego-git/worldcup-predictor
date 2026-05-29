@@ -19,13 +19,15 @@ MANIFEST_PATH = DATA_RAW_DIR / "data_manifest.json"
 FIXTURES_PLACEHOLDER_COLUMNS = [
     "match_id",
     "stage",
+    "round",
     "group",
     "date",
-    "kickoff_time",
-    "venue",
-    "city",
-    "team_1",
-    "team_2",
+    "time",
+    "team_a",
+    "team_b",
+    "ground",
+    "neutral",
+    "source_status",
 ]
 
 DOWNLOAD_SOURCES = [
@@ -49,9 +51,9 @@ DOWNLOAD_SOURCES = [
     },
     {
         "file_name": "fixtures.csv",
-        "source_url": "https://worldcup26.ir/api/matches",
-        "kind": "auto",
-        "notes": "World Cup 2026 fixtures from a public no-key API when available; JSON is normalized without renaming fields.",
+        "source_url": "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json",
+        "kind": "fixtures_2026",
+        "notes": "World Cup 2026 fixtures from openfootball/worldcup.json.",
     },
 ]
 
@@ -76,6 +78,50 @@ def read_downloaded_file(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, comment="#")
 
 
+def normalize_team_name(team_value: object) -> object:
+    """Return a team name from the openfootball team field."""
+    if isinstance(team_value, dict):
+        return team_value.get("name") or team_value.get("code") or team_value.get("key")
+    return team_value
+
+
+def parse_2026_fixtures(response: requests.Response) -> pd.DataFrame:
+    """Parse openfootball World Cup 2026 fixtures into the project schema."""
+    data = response.json()
+    matches = data.get("matches") if isinstance(data, dict) else None
+    if not isinstance(matches, list):
+        raise ValueError('World Cup 2026 fixtures JSON must contain a top-level "matches" list.')
+
+    rows = []
+    for match_id, match in enumerate(matches, start=1):
+        group = match.get("group")
+        rows.append(
+            {
+                "match_id": match_id,
+                "stage": "group_stage" if group else "knockout",
+                "round": match.get("round"),
+                "group": group,
+                "date": match.get("date"),
+                "time": match.get("time"),
+                "team_a": normalize_team_name(match.get("team1")),
+                "team_b": normalize_team_name(match.get("team2")),
+                "ground": match.get("ground"),
+                "neutral": True,
+                "source_status": "downloaded",
+            }
+        )
+
+    return pd.DataFrame(rows, columns=FIXTURES_PLACEHOLDER_COLUMNS)
+
+
+def create_fixtures_placeholder() -> pd.DataFrame:
+    """Create a fixtures placeholder with the expected schema."""
+    placeholder = {column: "" for column in FIXTURES_PLACEHOLDER_COLUMNS}
+    placeholder["source_status"] = "placeholder"
+    placeholder["neutral"] = True
+    return pd.DataFrame([placeholder], columns=FIXTURES_PLACEHOLDER_COLUMNS)
+
+
 def warn_and_continue(file_name: str, error: Exception) -> None:
     """Print a clear warning and continue only when a local file exists."""
     local_path = DATA_RAW_DIR / file_name
@@ -87,6 +133,9 @@ def warn_and_continue(file_name: str, error: Exception) -> None:
 
 def response_to_dataframe(response: requests.Response, kind: str) -> pd.DataFrame:
     """Convert a response into a DataFrame without silently changing schemas."""
+    if kind == "fixtures_2026":
+        return parse_2026_fixtures(response)
+
     content_type = response.headers.get("content-type", "").lower()
     text = response.text.strip()
 
@@ -135,6 +184,19 @@ def download_one(source: dict[str, str]) -> dict[str, object] | None:
         }
     except Exception as error:
         warn_and_continue(file_name, error)
+        if file_name == "fixtures.csv":
+            data = create_fixtures_placeholder()
+            data.to_csv(target_path, index=False)
+            print("WARNING: created fixtures.csv placeholder. Replace it with downloaded 2026 fixtures before final predictions.")
+            return {
+                "file_name": file_name,
+                "source_url": source["source_url"],
+                "download_timestamp": utc_timestamp(),
+                "row_count": int(len(data)),
+                "columns": list(data.columns),
+                "sha256_hash": sha256_hash(target_path),
+                "notes": f"{source['notes']} Download failed: {error}. Placeholder schema created with source_status=placeholder.",
+            }
         if target_path.exists():
             data = read_downloaded_file(target_path)
             return {
@@ -145,19 +207,6 @@ def download_one(source: dict[str, str]) -> dict[str, object] | None:
                 "columns": list(data.columns),
                 "sha256_hash": sha256_hash(target_path),
                 "notes": f"{source['notes']} Existing local file used after download failure.",
-            }
-        if file_name == "fixtures.csv":
-            data = pd.DataFrame(columns=FIXTURES_PLACEHOLDER_COLUMNS)
-            data.to_csv(target_path, index=False)
-            print("WARNING: created empty fixtures.csv placeholder. Replace it with public 2026 fixtures before final predictions.")
-            return {
-                "file_name": file_name,
-                "source_url": source["source_url"],
-                "download_timestamp": utc_timestamp(),
-                "row_count": 0,
-                "columns": list(data.columns),
-                "sha256_hash": sha256_hash(target_path),
-                "notes": f"{source['notes']} Download failed; empty schema placeholder created.",
             }
         return None
 

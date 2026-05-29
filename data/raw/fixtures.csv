@@ -1,1 +1,105 @@
-match_id,stage,group,date,kickoff_time,venue,city,team_1,team_2
+match_id,stage,round,group,date,time,team_a,team_b,ground,neutral,source_status
+1,group_stage,Matchday 1,Group A,2026-06-11,13:00 UTC-6,Mexico,South Africa,Mexico City,True,downloaded
+2,group_stage,Matchday 1,Group A,2026-06-11,20:00 UTC-6,South Korea,Czech Republic,Guadalajara (Zapopan),True,downloaded
+3,group_stage,Matchday 8,Group A,2026-06-18,12:00 UTC-4,Czech Republic,South Africa,Atlanta,True,downloaded
+4,group_stage,Matchday 8,Group A,2026-06-18,19:00 UTC-6,Mexico,South Korea,Guadalajara (Zapopan),True,downloaded
+5,group_stage,Matchday 14,Group A,2026-06-24,19:00 UTC-6,Czech Republic,Mexico,Mexico City,True,downloaded
+6,group_stage,Matchday 14,Group A,2026-06-24,19:00 UTC-6,South Africa,South Korea,Monterrey (Guadalupe),True,downloaded
+7,group_stage,Matchday 2,Group B,2026-06-12,15:00 UTC-4,Canada,Bosnia & Herzegovina,Toronto,True,downloaded
+8,group_stage,Matchday 3,Group B,2026-06-13,12:00 UTC-7,Qatar,Switzerland,San Francisco Bay Area (Santa Clara),True,downloaded
+9,group_stage,Matchday 8,Group B,2026-06-18,12:00 UTC-7,Switzerland,Bosnia & Herzegovina,Los Angeles (Inglewood),True,downloaded
+10,group_stage,Matchday 8,Group B,2026-06-18,15:00 UTC-7,Canada,Qatar,Vancouver,True,downloaded
+11,group_stage,Matchday 14,Group B,2026-06-24,12:00 UTC-7,Switzerland,Canada,Vancouver,True,downloaded
+12,group_stage,Matchday 14,Group B,2026-06-24,12:00 UTC-7,Bosnia & Herzegovina,Qatar,Seattle,True,downloaded
+13,group_stage,Matchday 3,Group C,2026-06-13,18:00 UTC-4,Brazil,Morocco,New York/New Jersey (East Rutherford),True,downloaded
+14,group_stage,Matchday 3,Group C,2026-06-13,21:00 UTC-4,Haiti,Scotland,Boston (Foxborough),True,downloaded
+15,group_stage,Matchday 9,Group C,2026-06-19,18:00 UTC-4,Scotland,Morocco,Boston (Foxborough),True,downloaded
+16,group_stage,Matchday 9,Group C,2026-06-19,20:30 UTC-4,Brazil,Haiti,Philadelphia,True,downloaded
+17,group_stage,Matchday 14,Group C,2026-06-24,18:00 UTC-4,Scotland,Brazil,Miami (Miami Gardens),True,downloaded
+18,group_stage,Matchday 14,Group C,2026-06-24,18:00 UTC-4,Morocco,Haiti,Atlanta,True,downloaded
+19,group_stage,Matchday 2,Group D,2026-06-12,18:00 UTC-7,USA,Paraguay,Los Angeles (Inglewood),True,downloaded
+20,group_stage,Matchday 3,Group D,2026-06-13,21:00 UTC-7,Australia,Turkey,Vancouver,True,downloaded
+21,group_stage,Matchday 9,Group D,2026-06-19,12:00 UTC-7,USA,Australia,Seattle,True,downloaded
+22,group_stage,Matchday 9,Group D,2026-06-19,20:00 UTC-7,Turkey,Paraguay,San Francisco Bay Area (Santa Clara),True,downloaded
+23,group_stage,Matchday 15,Group D,2026-06-25,19:00 UTC-7,Turkey,USA,Los Angeles (Inglewood),True,downloaded
+24,group_stage,Matchday 15,Group D,2026-06-25,19:00 UTC-7,Paraguay,Australia,San Francisco Bay Area (Santa Clara),True,downloaded
+25,group_stage,Matchday 4,Group E,2026-06-14,12:00 UTC-5,Germany,Curaçao,Houston,True,downloaded
+26,group_stage,Matchday 4,Group E,2026-06-14,19:00 UTC-4,Ivory Coast,Ecuador,Philadelphia,True,downloaded
+27,group_stage,Matchday 10,Group E,2026-06-20,16:00 UTC-4,Germany,Ivory Coast,Toronto,True,downloaded
+28,group_stage,Matchday 10,Group E,2026-06-20,19:00 UTC-5,Ecuador,Curaçao,Kansas City,True,downloaded
+29,group_stage,Matchday 15,Group E,2026-06-25,16:00 UTC-4,Curaçao,Ivory Coast,Philadelphia,True,downloaded
+30,group_stage,Matchday 15,Group E,2026-06-25,16:00 UTC-4,Ecuador,Germany,New York/New Jersey (East Rutherford),True,downloaded
+31,group_stage,Matchday 4,Group F,2026-06-14,15:00 UTC-5,Netherlands,Japan,Dallas (Arlington),True,downloaded
+32,group_stage,Matchday 4,Group F,2026-06-14,20:00 UTC-6,Sweden,Tunisia,Monterrey (Guadalupe),True,downloaded
+33,group_stage,Matchday 10,Group F,2026-06-20,12:00 UTC-5,Netherlands,Sweden,Houston,True,downloaded
+34,group_stage,Matchday 10,Group F,2026-06-20,22:00 UTC-6,Tunisia,Japan,Monterrey (Guadalupe),True,downloaded
+35,group_stage,Matchday 15,Group F,2026-06-25,18:00 UTC-5,Japan,Sweden,Dallas (Arlington),True,downloaded
+36,group_stage,Matchday 15,Group F,2026-06-25,18:00 UTC-5,Tunisia,Netherlands,Kansas City,True,downloaded
+37,group_stage,Matchday 5,Group G,2026-06-15,12:00 UTC-7,Belgium,Egypt,Seattle,True,downloaded
+38,group_stage,Matchday 5,Group G,2026-06-15,18:00 UTC-7,Iran,New Zealand,Los Angeles (Inglewood),True,downloaded
+39,group_stage,Matchday 11,Group G,2026-06-21,12:00 UTC-7,Belgium,Iran,Los Angeles (Inglewood),True,downloaded
+40,group_stage,Matchday 11,Group G,2026-06-21,18:00 UTC-7,New Zealand,Egypt,Vancouver,True,downloaded
+41,group_stage,Matchday 16,Group G,2026-06-26,20:00 UTC-7,Egypt,Iran,Seattle,True,downloaded
+42,group_stage,Matchday 16,Group G,2026-06-26,20:00 UTC-7,New Zealand,Belgium,Vancouver,True,downloaded
+43,group_stage,Matchday 5,Group H,2026-06-15,12:00 UTC-4,Spain,Cape Verde,Atlanta,True,downloaded
+44,group_stage,Matchday 5,Group H,2026-06-15,18:00 UTC-4,Saudi Arabia,Uruguay,Miami (Miami Gardens),True,downloaded
+45,group_stage,Matchday 11,Group H,2026-06-21,12:00 UTC-4,Spain,Saudi Arabia,Atlanta,True,downloaded
+46,group_stage,Matchday 11,Group H,2026-06-21,18:00 UTC-4,Uruguay,Cape Verde,Miami (Miami Gardens),True,downloaded
+47,group_stage,Matchday 16,Group H,2026-06-26,19:00 UTC-5,Cape Verde,Saudi Arabia,Houston,True,downloaded
+48,group_stage,Matchday 16,Group H,2026-06-26,18:00 UTC-6,Uruguay,Spain,Guadalajara (Zapopan),True,downloaded
+49,group_stage,Matchday 6,Group I,2026-06-16,15:00 UTC-4,France,Senegal,New York/New Jersey (East Rutherford),True,downloaded
+50,group_stage,Matchday 6,Group I,2026-06-16,18:00 UTC-4,Iraq,Norway,Boston (Foxborough),True,downloaded
+51,group_stage,Matchday 12,Group I,2026-06-22,17:00 UTC-4,France,Iraq,Philadelphia,True,downloaded
+52,group_stage,Matchday 12,Group I,2026-06-22,20:00 UTC-4,Norway,Senegal,New York/New Jersey (East Rutherford),True,downloaded
+53,group_stage,Matchday 16,Group I,2026-06-26,15:00 UTC-4,Norway,France,Boston (Foxborough),True,downloaded
+54,group_stage,Matchday 16,Group I,2026-06-26,15:00 UTC-4,Senegal,Iraq,Toronto,True,downloaded
+55,group_stage,Matchday 6,Group J,2026-06-16,20:00 UTC-5,Argentina,Algeria,Kansas City,True,downloaded
+56,group_stage,Matchday 6,Group J,2026-06-16,21:00 UTC-7,Austria,Jordan,San Francisco Bay Area (Santa Clara),True,downloaded
+57,group_stage,Matchday 12,Group J,2026-06-22,12:00 UTC-5,Argentina,Austria,Dallas (Arlington),True,downloaded
+58,group_stage,Matchday 12,Group J,2026-06-22,20:00 UTC-7,Jordan,Algeria,San Francisco Bay Area (Santa Clara),True,downloaded
+59,group_stage,Matchday 17,Group J,2026-06-27,21:00 UTC-5,Algeria,Austria,Kansas City,True,downloaded
+60,group_stage,Matchday 17,Group J,2026-06-27,21:00 UTC-5,Jordan,Argentina,Dallas (Arlington),True,downloaded
+61,group_stage,Matchday 7,Group K,2026-06-17,12:00 UTC-5,Portugal,DR Congo,Houston,True,downloaded
+62,group_stage,Matchday 7,Group K,2026-06-17,20:00 UTC-6,Uzbekistan,Colombia,Mexico City,True,downloaded
+63,group_stage,Matchday 13,Group K,2026-06-23,12:00 UTC-5,Portugal,Uzbekistan,Houston,True,downloaded
+64,group_stage,Matchday 13,Group K,2026-06-23,20:00 UTC-6,Colombia,DR Congo,Guadalajara (Zapopan),True,downloaded
+65,group_stage,Matchday 17,Group K,2026-06-27,19:30 UTC-4,Colombia,Portugal,Miami (Miami Gardens),True,downloaded
+66,group_stage,Matchday 17,Group K,2026-06-27,19:30 UTC-4,DR Congo,Uzbekistan,Atlanta,True,downloaded
+67,group_stage,Matchday 7,Group L,2026-06-17,15:00 UTC-5,England,Croatia,Dallas (Arlington),True,downloaded
+68,group_stage,Matchday 7,Group L,2026-06-17,19:00 UTC-4,Ghana,Panama,Toronto,True,downloaded
+69,group_stage,Matchday 13,Group L,2026-06-23,16:00 UTC-4,England,Ghana,Boston (Foxborough),True,downloaded
+70,group_stage,Matchday 13,Group L,2026-06-23,19:00 UTC-4,Panama,Croatia,Toronto,True,downloaded
+71,group_stage,Matchday 17,Group L,2026-06-27,17:00 UTC-4,Panama,England,New York/New Jersey (East Rutherford),True,downloaded
+72,group_stage,Matchday 17,Group L,2026-06-27,17:00 UTC-4,Croatia,Ghana,Philadelphia,True,downloaded
+73,knockout,Round of 32,,2026-06-28,12:00 UTC-7,2A,2B,Los Angeles (Inglewood),True,downloaded
+74,knockout,Round of 32,,2026-06-29,16:30 UTC-4,1E,3A/B/C/D/F,Boston (Foxborough),True,downloaded
+75,knockout,Round of 32,,2026-06-29,19:00 UTC-6,1F,2C,Monterrey (Guadalupe),True,downloaded
+76,knockout,Round of 32,,2026-06-29,12:00 UTC-5,1C,2F,Houston,True,downloaded
+77,knockout,Round of 32,,2026-06-30,17:00 UTC-4,1I,3C/D/F/G/H,New York/New Jersey (East Rutherford),True,downloaded
+78,knockout,Round of 32,,2026-06-30,12:00 UTC-5,2E,2I,Dallas (Arlington),True,downloaded
+79,knockout,Round of 32,,2026-06-30,19:00 UTC-6,1A,3C/E/F/H/I,Mexico City,True,downloaded
+80,knockout,Round of 32,,2026-07-01,12:00 UTC-4,1L,3E/H/I/J/K,Atlanta,True,downloaded
+81,knockout,Round of 32,,2026-07-01,17:00 UTC-7,1D,3B/E/F/I/J,San Francisco Bay Area (Santa Clara),True,downloaded
+82,knockout,Round of 32,,2026-07-01,13:00 UTC-7,1G,3A/E/H/I/J,Seattle,True,downloaded
+83,knockout,Round of 32,,2026-07-02,19:00 UTC-4,2K,2L,Toronto,True,downloaded
+84,knockout,Round of 32,,2026-07-02,12:00 UTC-7,1H,2J,Los Angeles (Inglewood),True,downloaded
+85,knockout,Round of 32,,2026-07-02,20:00 UTC-7,1B,3E/F/G/I/J,Vancouver,True,downloaded
+86,knockout,Round of 32,,2026-07-03,18:00 UTC-4,1J,2H,Miami (Miami Gardens),True,downloaded
+87,knockout,Round of 32,,2026-07-03,20:30 UTC-5,1K,3D/E/I/J/L,Kansas City,True,downloaded
+88,knockout,Round of 32,,2026-07-03,13:00 UTC-5,2D,2G,Dallas (Arlington),True,downloaded
+89,knockout,Round of 16,,2026-07-04,17:00 UTC-4,W74,W77,Philadelphia,True,downloaded
+90,knockout,Round of 16,,2026-07-04,12:00 UTC-5,W73,W75,Houston,True,downloaded
+91,knockout,Round of 16,,2026-07-05,16:00 UTC-4,W76,W78,New York/New Jersey (East Rutherford),True,downloaded
+92,knockout,Round of 16,,2026-07-05,18:00 UTC-6,W79,W80,Mexico City,True,downloaded
+93,knockout,Round of 16,,2026-07-06,14:00 UTC-5,W83,W84,Dallas (Arlington),True,downloaded
+94,knockout,Round of 16,,2026-07-06,17:00 UTC-7,W81,W82,Seattle,True,downloaded
+95,knockout,Round of 16,,2026-07-07,12:00 UTC-4,W86,W88,Atlanta,True,downloaded
+96,knockout,Round of 16,,2026-07-07,13:00 UTC-7,W85,W87,Vancouver,True,downloaded
+97,knockout,Quarter-final,,2026-07-09,16:00 UTC-4,W89,W90,Boston (Foxborough),True,downloaded
+98,knockout,Quarter-final,,2026-07-10,12:00 UTC-7,W93,W94,Los Angeles (Inglewood),True,downloaded
+99,knockout,Quarter-final,,2026-07-11,17:00 UTC-4,W91,W92,Miami (Miami Gardens),True,downloaded
+100,knockout,Quarter-final,,2026-07-11,20:00 UTC-5,W95,W96,Kansas City,True,downloaded
+101,knockout,Semi-final,,2026-07-14,14:00 UTC-5,W97,W98,Dallas (Arlington),True,downloaded
+102,knockout,Semi-final,,2026-07-15,15:00 UTC-4,W99,W100,Atlanta,True,downloaded
+103,knockout,Match for third place,,2026-07-18,17:00 UTC-4,L101,L102,Miami (Miami Gardens),True,downloaded
+104,knockout,Final,,2026-07-19,15:00 UTC-4,W101,W102,New York/New Jersey (East Rutherford),True,downloaded
