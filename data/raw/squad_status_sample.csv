@@ -1,7 +1,1 @@
-player_id,team,status,probability_in_squad,notes
-p001,Argentina,likely,0.95,Sample status
-p002,France,likely,0.98,Sample status
-p003,Brazil,likely,0.95,Sample status
-p004,Argentina,likely,0.95,Sample status
-p005,Brazil,likely,0.95,Sample status
-
+team,player,confirmed_squad,probability_in_squad,status_notes

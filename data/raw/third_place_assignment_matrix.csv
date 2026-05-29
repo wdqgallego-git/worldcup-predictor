@@ -1,5 +1,3 @@
-scenario,third_place_groups,round_of_32_slot,opponent_slot,notes
-sample_1,A-B-C-D-E-F-G-H,1,32,Placeholder assignment row
-sample_2,A-B-C-D-E-F-G-I,2,31,Placeholder assignment row
-sample_3,A-B-C-D-E-F-H-I,3,30,Placeholder assignment row
-
+# This file must be completed using the official 2026 Round-of-32 third-place assignment matrix before final predictions.
+# For development, the simulator may use a deterministic fallback assignment, but final predictions must use the official matrix.
+qualified_third_groups,slot_1,slot_2,slot_3,slot_4,slot_5,slot_6,slot_7,slot_8

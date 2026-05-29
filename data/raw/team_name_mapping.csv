@@ -1,8 +1,13 @@
-raw_name,standard_name,fifa_code,notes
-United States,USA,USA,Host
-Mexico,Mexico,MEX,Host
-Canada,Canada,CAN,Host
-Argentina,Argentina,ARG,Sample team
-France,France,FRA,Sample team
-Brazil,Brazil,BRA,Sample team
-
+source_name,standard_name
+USA,United States
+United States,United States
+Korea Republic,South Korea
+South Korea,South Korea
+IR Iran,Iran
+Iran,Iran
+Côte d'Ivoire,Ivory Coast
+Ivory Coast,Ivory Coast
+Türkiye,Turkey
+Turkey,Turkey
+Czech Republic,Czechia
+Czechia,Czechia

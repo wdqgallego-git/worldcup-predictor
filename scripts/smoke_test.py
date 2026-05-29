@@ -17,7 +17,7 @@ def main() -> None:
     validate_2026_format()
     scoring = load_company_scoring_rules()
     required_awards = {"champion", "runner_up", "top_scorer", "mvp", "golden_glove"}
-    found_awards = {row["award"] for row in scoring}
+    found_awards = {row["category"] for row in scoring}
     missing_awards = required_awards - found_awards
     if missing_awards:
         raise AssertionError(f"Missing scoring rules: {sorted(missing_awards)}")
