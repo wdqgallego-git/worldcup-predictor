@@ -1,11 +1,14 @@
 """Company-game award strategy helpers."""
 
-from config import COMPANY_SCORING, STRATEGIC_EV_MIN_RATIO
+from config import AWARD_POINTS
+
+
+STRATEGIC_EV_MIN_RATIO = 0.85
 
 
 def expected_award_points(probability: float, award: str) -> float:
     """Convert an award probability into company-game expected points."""
-    return probability * COMPANY_SCORING[award]
+    return probability * AWARD_POINTS[award]
 
 
 def strategic_pick_allowed(candidate_ev: float, safe_ev: float) -> bool:
@@ -13,4 +16,3 @@ def strategic_pick_allowed(candidate_ev: float, safe_ev: float) -> bool:
     if safe_ev <= 0:
         return candidate_ev >= safe_ev
     return candidate_ev / safe_ev >= STRATEGIC_EV_MIN_RATIO
-

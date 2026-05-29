@@ -3,12 +3,12 @@
 import csv
 from pathlib import Path
 
-from config import RAW_DATA_DIR
+from config import DATA_RAW_DIR
 
 
-def load_raw_csv(filename: str, raw_dir: Path = RAW_DATA_DIR) -> list[dict[str, str]]:
+def load_raw_csv(filename: str, raw_dir: str | Path = DATA_RAW_DIR) -> list[dict[str, str]]:
     """Load a CSV file from data/raw."""
-    with (raw_dir / filename).open(newline="", encoding="utf-8") as csv_file:
+    with (Path(raw_dir) / filename).open(newline="", encoding="utf-8") as csv_file:
         return list(csv.DictReader(csv_file))
 
 

@@ -1,13 +1,11 @@
 """World Cup 2026 tournament simulation skeleton."""
 
-from config import (
-    BEST_THIRD_PLACE_QUALIFIERS,
-    DIRECT_QUALIFIERS_PER_GROUP,
-    KNOCKOUT_TEAMS,
-    N_GROUPS,
-    N_TEAMS,
-    TEAMS_PER_GROUP,
-)
+N_TEAMS = 48
+N_GROUPS = 12
+TEAMS_PER_GROUP = 4
+DIRECT_QUALIFIERS_PER_GROUP = 2
+BEST_THIRD_PLACE_QUALIFIERS = 8
+KNOCKOUT_TEAMS = 32
 
 
 def validate_2026_format() -> None:
@@ -23,4 +21,3 @@ def simulate_tournament():
     """Simulate the full tournament."""
     validate_2026_format()
     raise NotImplementedError("Tournament simulation will be implemented later.")
-

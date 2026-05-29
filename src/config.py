@@ -1,26 +1,37 @@
 """Project configuration and constants."""
 
-from pathlib import Path
+TRAIN_START_DATE = "2000-01-01"
+PREDICTION_REFERENCE_DATE = "2026-06-01"
 
+MAX_GOALS_DEV = 6
+MAX_GOALS_FINAL = 7
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = PROJECT_ROOT / "data"
-RAW_DATA_DIR = DATA_DIR / "raw"
-PROCESSED_DATA_DIR = DATA_DIR / "processed"
-OUTPUTS_DIR = PROJECT_ROOT / "outputs"
+N_SIMULATIONS_DEV = 1000
+N_SIMULATIONS_FINAL = 20000
 
-N_TEAMS = 48
-N_GROUPS = 12
-TEAMS_PER_GROUP = 4
-DIRECT_QUALIFIERS_PER_GROUP = 2
-BEST_THIRD_PLACE_QUALIFIERS = 8
-KNOCKOUT_TEAMS = 32
-FINALIST_MATCHES = 8
+DATA_RAW_DIR = "data/raw"
+DATA_PROCESSED_DIR = "data/processed"
+OUTPUT_DIR = "outputs"
 
-DEV_SIMULATIONS = 1_000
-FINAL_SIMULATIONS = 20_000
+MODEL_PARAMS_POISSON_HGB = {
+    "loss": "poisson",
+    "max_iter": 150,
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 15,
+    "l2_regularization": 0.1,
+    "random_state": 42,
+}
 
-COMPANY_SCORING = {
+MODEL_PARAMS_SQUARED_HGB = {
+    "loss": "squared_error",
+    "max_iter": 150,
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 15,
+    "l2_regularization": 0.1,
+    "random_state": 42,
+}
+
+AWARD_POINTS = {
     "champion": 25,
     "runner_up": 15,
     "top_scorer": 35,
@@ -28,7 +39,4 @@ COMPANY_SCORING = {
     "golden_glove": 10,
 }
 
-STRATEGIC_EV_MIN_RATIO = 0.85
-STRATEGIC_EV_TARGET_RATIO = 0.90
-RANDOM_SEED = 2026
-
+DEVELOPMENT_MODE = True
