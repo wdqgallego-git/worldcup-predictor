@@ -1,0 +1,71 @@
+[
+  {
+    "file_name": "results.csv",
+    "source_url": "https://raw.githubusercontent.com/martj42/international_results/master/results.csv",
+    "download_timestamp": "2026-05-29T20:20:24Z",
+    "row_count": 49329,
+    "columns": [
+      "date",
+      "home_team",
+      "away_team",
+      "home_score",
+      "away_score",
+      "tournament",
+      "city",
+      "country",
+      "neutral"
+    ],
+    "sha256_hash": "886781eaf304fd0121f1e2f0fb521dd2af67d8f88d50b8f079c8777c77226e88",
+    "notes": "Historical international football results from martj42/international_results."
+  },
+  {
+    "file_name": "shootouts.csv",
+    "source_url": "https://raw.githubusercontent.com/martj42/international_results/master/shootouts.csv",
+    "download_timestamp": "2026-05-29T20:20:24Z",
+    "row_count": 677,
+    "columns": [
+      "date",
+      "home_team",
+      "away_team",
+      "winner",
+      "first_shooter"
+    ],
+    "sha256_hash": "4ec7626ce2f58f6d11117938ee8840a4b20420690e536c8a6b744dde31badb96",
+    "notes": "Historical international penalty shootout results from martj42/international_results."
+  },
+  {
+    "file_name": "rankings.csv",
+    "source_url": "https://raw.githubusercontent.com/Dato-Futbol/fifa-ranking/refs/heads/master/ranking_fifa_historical.csv",
+    "download_timestamp": "2026-05-29T20:20:24Z",
+    "row_count": 67894,
+    "columns": [
+      "team",
+      "total_points",
+      "date",
+      "id",
+      "id_num",
+      "team_short"
+    ],
+    "sha256_hash": "0eb0aa88c0981908ece7a3497e3175bd3b8d7102cd4a912b51cc3af9e7946397",
+    "notes": "Historical FIFA rankings from Dato-Futbol/fifa-ranking."
+  },
+  {
+    "file_name": "fixtures.csv",
+    "source_url": "https://worldcup26.ir/api/matches",
+    "download_timestamp": "2026-05-29T20:20:25Z",
+    "row_count": 0,
+    "columns": [
+      "match_id",
+      "stage",
+      "group",
+      "date",
+      "kickoff_time",
+      "venue",
+      "city",
+      "team_1",
+      "team_2"
+    ],
+    "sha256_hash": "c344cfdebf5a4d18593e8cd3426ae1433fa23f37eae141abeba1d7995460e327",
+    "notes": "World Cup 2026 fixtures from a public no-key API when available; JSON is normalized without renaming fields. Download failed; empty schema placeholder created."
+  }
+]

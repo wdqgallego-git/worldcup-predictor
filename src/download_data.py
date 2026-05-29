@@ -1,10 +1,186 @@
-"""Data download placeholders.
+"""Download raw data and write a reproducibility manifest.
 
-The first implementation will keep data sources explicit and reproducible.
+Run from the repository root:
+
+    python src/download_data.py
 """
 
+import hashlib
+import json
+from datetime import datetime, timezone
+from pathlib import Path
 
-def download_all() -> None:
-    """Download or refresh raw data sources."""
-    raise NotImplementedError("Data download steps will be added after sources are selected.")
+import pandas as pd
+import requests
 
+
+DATA_RAW_DIR = Path("data/raw")
+MANIFEST_PATH = DATA_RAW_DIR / "data_manifest.json"
+FIXTURES_PLACEHOLDER_COLUMNS = [
+    "match_id",
+    "stage",
+    "group",
+    "date",
+    "kickoff_time",
+    "venue",
+    "city",
+    "team_1",
+    "team_2",
+]
+
+DOWNLOAD_SOURCES = [
+    {
+        "file_name": "results.csv",
+        "source_url": "https://raw.githubusercontent.com/martj42/international_results/master/results.csv",
+        "kind": "csv",
+        "notes": "Historical international football results from martj42/international_results.",
+    },
+    {
+        "file_name": "shootouts.csv",
+        "source_url": "https://raw.githubusercontent.com/martj42/international_results/master/shootouts.csv",
+        "kind": "csv",
+        "notes": "Historical international penalty shootout results from martj42/international_results.",
+    },
+    {
+        "file_name": "rankings.csv",
+        "source_url": "https://raw.githubusercontent.com/Dato-Futbol/fifa-ranking/refs/heads/master/ranking_fifa_historical.csv",
+        "kind": "csv",
+        "notes": "Historical FIFA rankings from Dato-Futbol/fifa-ranking.",
+    },
+    {
+        "file_name": "fixtures.csv",
+        "source_url": "https://worldcup26.ir/api/matches",
+        "kind": "auto",
+        "notes": "World Cup 2026 fixtures from a public no-key API when available; JSON is normalized without renaming fields.",
+    },
+]
+
+
+def ensure_raw_dir() -> None:
+    """Create data/raw if it does not exist."""
+    DATA_RAW_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def sha256_hash(path: Path) -> str:
+    """Return the SHA-256 hash for a file."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def utc_timestamp() -> str:
+    """Return an ISO-8601 UTC timestamp."""
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def read_downloaded_file(path: Path) -> pd.DataFrame:
+    """Read a downloaded CSV without altering the schema."""
+    return pd.read_csv(path, comment="#")
+
+
+def warn_and_continue(file_name: str, error: Exception) -> None:
+    """Print a clear warning and continue only when a local file exists."""
+    local_path = DATA_RAW_DIR / file_name
+    if local_path.exists():
+        print(f"WARNING: failed to download {file_name}: {error}. Continuing with existing local file.")
+    else:
+        print(f"WARNING: failed to download {file_name}: {error}. No local sample file is available.")
+
+
+def response_to_dataframe(response: requests.Response, kind: str) -> pd.DataFrame:
+    """Convert a response into a DataFrame without silently changing schemas."""
+    content_type = response.headers.get("content-type", "").lower()
+    text = response.text.strip()
+
+    if kind == "csv" or (kind == "auto" and "json" not in content_type and not text.startswith(("{", "["))):
+        temp_path = DATA_RAW_DIR / "_download_temp.csv"
+        temp_path.write_text(response.text, encoding="utf-8")
+        try:
+            return pd.read_csv(temp_path)
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    data = response.json()
+    if isinstance(data, dict):
+        for key in ("matches", "fixtures", "data", "results"):
+            if key in data and isinstance(data[key], list):
+                data = data[key]
+                break
+
+    if not isinstance(data, list):
+        raise ValueError("JSON fixture response is not a list and has no known list field.")
+
+    return pd.json_normalize(data)
+
+
+def download_one(source: dict[str, str]) -> dict[str, object] | None:
+    """Download one source and return its manifest entry."""
+    file_name = source["file_name"]
+    target_path = DATA_RAW_DIR / file_name
+
+    try:
+        response = requests.get(source["source_url"], timeout=30)
+        response.raise_for_status()
+        data = response_to_dataframe(response, source["kind"])
+
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        data.to_csv(target_path, index=False)
+
+        return {
+            "file_name": file_name,
+            "source_url": source["source_url"],
+            "download_timestamp": utc_timestamp(),
+            "row_count": int(len(data)),
+            "columns": list(data.columns),
+            "sha256_hash": sha256_hash(target_path),
+            "notes": source["notes"],
+        }
+    except Exception as error:
+        warn_and_continue(file_name, error)
+        if target_path.exists():
+            data = read_downloaded_file(target_path)
+            return {
+                "file_name": file_name,
+                "source_url": source["source_url"],
+                "download_timestamp": utc_timestamp(),
+                "row_count": int(len(data)),
+                "columns": list(data.columns),
+                "sha256_hash": sha256_hash(target_path),
+                "notes": f"{source['notes']} Existing local file used after download failure.",
+            }
+        if file_name == "fixtures.csv":
+            data = pd.DataFrame(columns=FIXTURES_PLACEHOLDER_COLUMNS)
+            data.to_csv(target_path, index=False)
+            print("WARNING: created empty fixtures.csv placeholder. Replace it with public 2026 fixtures before final predictions.")
+            return {
+                "file_name": file_name,
+                "source_url": source["source_url"],
+                "download_timestamp": utc_timestamp(),
+                "row_count": 0,
+                "columns": list(data.columns),
+                "sha256_hash": sha256_hash(target_path),
+                "notes": f"{source['notes']} Download failed; empty schema placeholder created.",
+            }
+        return None
+
+
+def write_manifest(entries: list[dict[str, object]]) -> None:
+    """Write the raw data manifest."""
+    MANIFEST_PATH.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+
+
+def download_all() -> list[dict[str, object]]:
+    """Download all configured raw data files."""
+    ensure_raw_dir()
+    manifest_entries = []
+
+    for source in DOWNLOAD_SOURCES:
+        entry = download_one(source)
+        if entry is not None:
+            manifest_entries.append(entry)
+
+    write_manifest(manifest_entries)
+    print(f"Wrote manifest with {len(manifest_entries)} entries to {MANIFEST_PATH}")
+    return manifest_entries
+
+
+if __name__ == "__main__":
+    download_all()
