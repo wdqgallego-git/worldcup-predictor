@@ -33,6 +33,23 @@ FEATURE_COLS = [
     "ranking_points_diff",
 ]
 
+FORM_FEATURE_DEFAULTS = {
+    "team_a_recent_points_per_match_5": 0.0,
+    "team_b_recent_points_per_match_5": 0.0,
+    "team_a_recent_points_per_match_10": 0.0,
+    "team_b_recent_points_per_match_10": 0.0,
+    "team_a_recent_goals_scored_5": 0.0,
+    "team_b_recent_goals_scored_5": 0.0,
+    "team_a_recent_goals_conceded_5": 0.0,
+    "team_b_recent_goals_conceded_5": 0.0,
+}
+RANKING_FEATURE_DEFAULTS = {
+    "rank_a": 100.0,
+    "rank_b": 100.0,
+    "ranking_points_a": 0.0,
+    "ranking_points_b": 0.0,
+}
+
 BASE_MATCH_COLS = ["team_a", "team_b", "goals_a", "goals_b", "date", "tournament", "neutral"]
 FIXTURE_REQUIRED_COLS = ["team_a", "team_b", "date"]
 RANKING_REQUIRED_COLS = ["team", "date", "total_points"]
@@ -179,14 +196,14 @@ def get_latest_ranking_before_date(
 ) -> dict[str, float]:
     """Return the latest FIFA ranking strictly before the match date."""
     if rankings is None or rankings.empty or pd.isna(team):
-        return {"rank": np.nan, "total_points": np.nan}
+        return {"rank": np.nan, "total_points": np.nan, "date": pd.NaT}
     prepared = rankings if {"rank", "total_points", "team", "date"}.issubset(rankings.columns) else prepare_rankings(rankings)
     date = pd.Timestamp(match_date)
     eligible = prepared[(prepared["team"] == team) & (prepared["date"] < date)]
     if eligible.empty:
-        return {"rank": np.nan, "total_points": np.nan}
+        return {"rank": np.nan, "total_points": np.nan, "date": pd.NaT}
     latest = eligible.iloc[-1]
-    return {"rank": float(latest["rank"]), "total_points": float(latest["total_points"])}
+    return {"rank": float(latest["rank"]), "total_points": float(latest["total_points"]), "date": latest["date"]}
 
 
 def build_ranking_history(rankings: pd.DataFrame) -> dict[str, list[dict[str, object]]]:
@@ -207,9 +224,9 @@ def latest_indexed_ranking_before_date(
     dates = [ranking["date"] for ranking in rankings]
     cutoff = bisect_left(dates, match_date)
     if cutoff == 0:
-        return {"rank": np.nan, "total_points": np.nan}
+        return {"rank": np.nan, "total_points": np.nan, "date": pd.NaT}
     latest = rankings[cutoff - 1]
-    return {"rank": float(latest["rank"]), "total_points": float(latest["total_points"])}
+    return {"rank": float(latest["rank"]), "total_points": float(latest["total_points"]), "date": latest["date"]}
 
 
 def add_ranking_features(matches: pd.DataFrame, rankings: pd.DataFrame | None) -> pd.DataFrame:
@@ -218,6 +235,8 @@ def add_ranking_features(matches: pd.DataFrame, rankings: pd.DataFrame | None) -
     if rankings is None or rankings.empty:
         for column in ("rank_a", "rank_b", "rank_diff", "ranking_points_a", "ranking_points_b", "ranking_points_diff"):
             featured[column] = np.nan
+        featured["ranking_date_a"] = pd.NaT
+        featured["ranking_date_b"] = pd.NaT
         return featured
 
     ranking_history = build_ranking_history(rankings)
@@ -231,11 +250,38 @@ def add_ranking_features(matches: pd.DataFrame, rankings: pd.DataFrame | None) -
                 "rank_b": rank_b["rank"],
                 "ranking_points_a": rank_a["total_points"],
                 "ranking_points_b": rank_b["total_points"],
+                "ranking_date_a": rank_a["date"],
+                "ranking_date_b": rank_b["date"],
             }
         )
 
     ranking_features = pd.DataFrame(ranking_rows, index=featured.index)
     featured = pd.concat([featured, ranking_features], axis=1)
+    featured["rank_diff"] = featured["rank_a"] - featured["rank_b"]
+    featured["ranking_points_diff"] = featured["ranking_points_a"] - featured["ranking_points_b"]
+    return featured
+
+
+def fill_missing_feature_values(matches: pd.DataFrame) -> pd.DataFrame:
+    """Fill sparse pre-match history with transparent neutral defaults."""
+    featured = matches.copy()
+    featured = featured.fillna(value=FORM_FEATURE_DEFAULTS)
+    featured = featured.fillna(value=RANKING_FEATURE_DEFAULTS)
+    featured["team_a_recent_goal_difference_5"] = (
+        featured["team_a_recent_goals_scored_5"] - featured["team_a_recent_goals_conceded_5"]
+    )
+    featured["team_b_recent_goal_difference_5"] = (
+        featured["team_b_recent_goals_scored_5"] - featured["team_b_recent_goals_conceded_5"]
+    )
+    featured["form_diff_5"] = (
+        featured["team_a_recent_points_per_match_5"] - featured["team_b_recent_points_per_match_5"]
+    )
+    featured["attack_diff_5"] = (
+        featured["team_a_recent_goals_scored_5"] - featured["team_b_recent_goals_scored_5"]
+    )
+    featured["defense_diff_5"] = (
+        featured["team_b_recent_goals_conceded_5"] - featured["team_a_recent_goals_conceded_5"]
+    )
     featured["rank_diff"] = featured["rank_a"] - featured["rank_b"]
     featured["ranking_points_diff"] = featured["ranking_points_a"] - featured["ranking_points_b"]
     return featured
@@ -266,6 +312,7 @@ def build_training_table(
     matches = add_recent_team_form_features(matches, results)
     matches = add_context_features(matches)
     matches = add_ranking_features(matches, rankings)
+    matches = fill_missing_feature_values(matches)
     return matches, FEATURE_COLS.copy()
 
 
@@ -282,6 +329,7 @@ def build_fixture_features(
     featured = add_recent_team_form_features(featured, historical_results)
     featured = add_context_features(featured)
     featured = add_ranking_features(featured, rankings)
+    featured = fill_missing_feature_values(featured)
     selected_features = feature_cols.copy() if feature_cols is not None else FEATURE_COLS.copy()
     validate_columns(featured, selected_features, "fixture features")
     return featured, selected_features

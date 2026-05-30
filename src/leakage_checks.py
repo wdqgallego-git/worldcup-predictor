@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 
-TARGET_COLUMNS = {"goals_a", "goals_b"}
+TARGET_COLUMNS = {"goals_a", "goals_b", "home_score", "away_score", "actual_goals_a", "actual_goals_b"}
 PLACEHOLDER_FEATURE_PATTERNS = {
     "placeholder",
     "team_name_length",

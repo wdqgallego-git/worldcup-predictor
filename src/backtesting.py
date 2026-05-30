@@ -63,6 +63,9 @@ def summarize_prediction_metrics(predictions: pd.DataFrame, label: str, year: in
     return {
         "year": year,
         "method": label,
+        "model_name": str(predictions["model_name"].iloc[0]) if "model_name" in predictions.columns else "unknown",
+        "probability_method": str(predictions["poisson_method"].iloc[0]) if "poisson_method" in predictions.columns else "not_applicable",
+        "prediction_method": "expected_points_optimized",
         "matches": len(predictions),
         **evaluate_goal_metrics(
             predictions["goals_a"],

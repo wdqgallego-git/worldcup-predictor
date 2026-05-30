@@ -100,6 +100,8 @@ def evaluate_challenge_points(
         "total_challenge_points": int(sum(points)),
         "average_challenge_points": float(np.mean(points)),
         "exact_score_rate": float(np.mean([pred_a == actual_goals_a and pred_b == actual_goals_b for actual_goals_a, actual_goals_b, pred_a, pred_b in zip(actual_a, actual_b, predicted_a, predicted_b)])),
+        "correct_result_rate": float(np.mean([get_result(pred_a, pred_b) == get_result(actual_goals_a, actual_goals_b) for actual_goals_a, actual_goals_b, pred_a, pred_b in zip(actual_a, actual_b, predicted_a, predicted_b)])),
+        "correct_goal_difference_rate": float(np.mean([pred_a - pred_b == actual_goals_a - actual_goals_b for actual_goals_a, actual_goals_b, pred_a, pred_b in zip(actual_a, actual_b, predicted_a, predicted_b)])),
     }
 
 
@@ -128,23 +130,23 @@ def add_baseline_predictions(
     predictions = matches.copy()
     if baseline == "always_1_1":
         predictions["pred_a"], predictions["pred_b"] = 1, 1
-    elif baseline == "ranking_favorite_1_0":
+    elif baseline == "favorite_1_0":
         validate_columns(predictions, RANKING_COLUMNS, baseline)
         scores = [
             (1, 1) if pd.isna(rank_a) or pd.isna(rank_b) or rank_a == rank_b else (1, 0) if rank_a < rank_b else (0, 1)
             for rank_a, rank_b in zip(predictions["rank_a"], predictions["rank_b"])
         ]
         predictions[["pred_a", "pred_b"]] = pd.DataFrame(scores, index=predictions.index)
-    elif baseline == "ranking_favorite_2_0_if_strong":
+    elif baseline == "favorite_2_0_if_strong":
         validate_columns(predictions, RANKING_COLUMNS, baseline)
         scores = [ranking_favorite_score(rank_a, rank_b) for rank_a, rank_b in zip(predictions["rank_a"], predictions["rank_b"])]
         predictions[["pred_a", "pred_b"]] = pd.DataFrame(scores, index=predictions.index)
-    elif baseline in {"most_likely_poisson_score", "expected_points_optimized_score"}:
+    elif baseline in {"most_likely_poisson", "expected_points_optimized"}:
         validate_columns(predictions, EXPECTED_GOALS_COLUMNS, baseline)
         scores = []
         for expected_a, expected_b in zip(predictions["expected_goals_a"], predictions["expected_goals_b"]):
             probabilities = score_probability_matrix(expected_a, expected_b, max_goals=max_goals)
-            if baseline == "most_likely_poisson_score":
+            if baseline == "most_likely_poisson":
                 scores.append(most_likely_poisson_score(expected_a, expected_b, max_goals=max_goals))
             else:
                 safe = get_safe_prediction(probabilities, max_goals=max_goals)
@@ -160,10 +162,10 @@ def evaluate_baselines(matches: pd.DataFrame, max_goals: int = 6) -> pd.DataFram
     validate_columns(matches, ACTUAL_SCORE_COLUMNS, "matches")
     baselines = [
         "always_1_1",
-        "ranking_favorite_1_0",
-        "ranking_favorite_2_0_if_strong",
-        "most_likely_poisson_score",
-        "expected_points_optimized_score",
+        "favorite_1_0",
+        "favorite_2_0_if_strong",
+        "most_likely_poisson",
+        "expected_points_optimized",
     ]
     rows = []
     for baseline in baselines:
