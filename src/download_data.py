@@ -78,13 +78,6 @@ def read_downloaded_file(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, comment="#")
 
 
-def normalize_team_name(team_value: object) -> object:
-    """Return a team name from the openfootball team field."""
-    if isinstance(team_value, dict):
-        return team_value.get("name") or team_value.get("code") or team_value.get("key")
-    return team_value
-
-
 def parse_2026_fixtures(response: requests.Response) -> pd.DataFrame:
     """Parse openfootball World Cup 2026 fixtures into the project schema."""
     data = response.json()
@@ -103,8 +96,8 @@ def parse_2026_fixtures(response: requests.Response) -> pd.DataFrame:
                 "group": group,
                 "date": match.get("date"),
                 "time": match.get("time"),
-                "team_a": normalize_team_name(match.get("team1")),
-                "team_b": normalize_team_name(match.get("team2")),
+                "team_a": match.get("team1"),
+                "team_b": match.get("team2"),
                 "ground": match.get("ground"),
                 "neutral": True,
                 "source_status": "downloaded",
@@ -164,9 +157,17 @@ def download_one(source: dict[str, str]) -> dict[str, object] | None:
     """Download one source and return its manifest entry."""
     file_name = source["file_name"]
     target_path = DATA_RAW_DIR / file_name
+    status_code = "request_failed"
 
     try:
+        if file_name == "fixtures.csv":
+            print(f"Fixtures URL: {source['source_url']}")
         response = requests.get(source["source_url"], timeout=30)
+        status_code = response.status_code
+        if file_name == "fixtures.csv":
+            print(f"Fixtures HTTP status code: {status_code}")
+            if status_code != 200:
+                print(f"Fixtures response preview: {response.text[:300]}")
         response.raise_for_status()
         data = response_to_dataframe(response, source["kind"])
 
@@ -195,7 +196,11 @@ def download_one(source: dict[str, str]) -> dict[str, object] | None:
                 "row_count": int(len(data)),
                 "columns": list(data.columns),
                 "sha256_hash": sha256_hash(target_path),
-                "notes": f"{source['notes']} Download failed: {error}. Placeholder schema created with source_status=placeholder.",
+                "notes": (
+                    f"{source['notes']} Download failed for URL {source['source_url']} "
+                    f"with HTTP status code {status_code}: {error}. "
+                    "Placeholder schema created with source_status=placeholder."
+                ),
             }
         if target_path.exists():
             data = read_downloaded_file(target_path)

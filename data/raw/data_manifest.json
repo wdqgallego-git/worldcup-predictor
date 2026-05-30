@@ -2,7 +2,7 @@
   {
     "file_name": "results.csv",
     "source_url": "https://raw.githubusercontent.com/martj42/international_results/master/results.csv",
-    "download_timestamp": "2026-05-29T21:28:19Z",
+    "download_timestamp": "2026-05-30T00:23:24Z",
     "row_count": 49329,
     "columns": [
       "date",
@@ -21,7 +21,7 @@
   {
     "file_name": "shootouts.csv",
     "source_url": "https://raw.githubusercontent.com/martj42/international_results/master/shootouts.csv",
-    "download_timestamp": "2026-05-29T21:28:19Z",
+    "download_timestamp": "2026-05-30T00:23:24Z",
     "row_count": 677,
     "columns": [
       "date",
@@ -36,7 +36,7 @@
   {
     "file_name": "rankings.csv",
     "source_url": "https://raw.githubusercontent.com/Dato-Futbol/fifa-ranking/refs/heads/master/ranking_fifa_historical.csv",
-    "download_timestamp": "2026-05-29T21:28:20Z",
+    "download_timestamp": "2026-05-30T00:23:25Z",
     "row_count": 67894,
     "columns": [
       "team",
@@ -52,7 +52,7 @@
   {
     "file_name": "fixtures.csv",
     "source_url": "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json",
-    "download_timestamp": "2026-05-29T21:28:20Z",
+    "download_timestamp": "2026-05-30T00:23:25Z",
     "row_count": 104,
     "columns": [
       "match_id",
