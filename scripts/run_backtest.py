@@ -82,6 +82,7 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
     hybrid_comparison = outputs["hybrid_strategy_comparison"].copy()
     calibration_report = outputs["calibration_report"].copy()
     significance_report = outputs["strategy_significance_report"].copy()
+    bucket_significance_report = outputs["bucket_significance_report"].copy()
     assert_true(predictions.groupby("backtest_year").size().eq(64).all(), "Each World Cup must have exactly 64 test matches.")
     assert_true(set(metrics["probability_method"]) == {"independent", "dixon_coles"}, "Both Poisson methods are required.")
     assert_true(REQUIRED_BASELINES.issubset(set(baselines["baseline"])), "Requested baselines are missing.")
@@ -94,6 +95,8 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
         "calibration_report.csv",
         "calibration_summary.txt",
         "strategy_significance_report.csv",
+        "bucket_significance_report.csv",
+        "bucket_significance_summary.txt",
     ):
         assert_true((output_path / file_name).exists(), f"Missing generated output: {file_name}")
     summary = metrics[
@@ -128,6 +131,13 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
     print(calibration_report.to_string(index=False))
     print("\nPAIRED BOOTSTRAP STRATEGY DIFFERENCES VS FAVORITE_1_0")
     print(significance_report.to_string(index=False))
+    print("\nHIGH-MISMATCH GROUP-STAGE SIGNIFICANCE")
+    high_mismatch = bucket_significance_report[
+        bucket_significance_report["bucket_name"].eq("special_high_mismatch_group")
+    ]
+    print(high_mismatch.to_string(index=False))
+    print("\nBUCKET SIGNIFICANCE DECISION")
+    print((output_path / "bucket_significance_summary.txt").read_text(encoding="utf-8"))
     return summary, baselines
 
 

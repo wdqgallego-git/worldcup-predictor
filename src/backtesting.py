@@ -32,7 +32,7 @@ from evaluation import (
 from features import build_fixture_features, build_training_table, prepare_match_table
 from model import evaluate_goal_models, predict_expected_goals, train_goal_models
 from poisson import score_probability_matrix, summarize_score_probs
-from prediction_optimizer import get_safe_prediction, points_for_prediction
+from prediction_optimizer import get_result, get_safe_prediction, points_for_prediction
 
 
 WORLD_CUP_BACKTESTS = {
@@ -44,6 +44,10 @@ WORLD_CUP_BACKTESTS = {
 FAVORITE_WIN_PROBABILITY_THRESHOLDS = np.round(np.arange(0.45, 0.751, 0.05), 2)
 EXPECTED_GOAL_DIFFERENCE_THRESHOLDS = [0.2, 0.5, 0.8, 1.1, 1.5]
 DRAW_PROBABILITY_THRESHOLDS = [0.25, 0.30, 0.35, 0.40]
+BUCKET_BOOTSTRAP_SAMPLES = 5000
+HIGH_MISMATCH_RANK_DIFF = 40.0
+HIGH_MISMATCH_FAVORITE_WIN_PROBABILITY = 0.60
+HIGH_MISMATCH_EXPECTED_GOAL_DIFFERENCE = 1.0
 
 
 def historical_world_cup_matches(results: pd.DataFrame, year: int) -> pd.DataFrame:
@@ -441,6 +445,223 @@ def search_hybrid_strategies(predictions: pd.DataFrame, max_goals: int = 6) -> p
     return comparison
 
 
+def add_bucket_significance_context(predictions: pd.DataFrame, max_goals: int = 6) -> pd.DataFrame:
+    """Add calibrated strategy outcomes and transparent mismatch buckets."""
+    context = predictions.copy()
+    favorite = add_baseline_predictions(context, "favorite_1_0", max_goals=max_goals)
+    context["favorite_pred_a"] = favorite["pred_a"]
+    context["favorite_pred_b"] = favorite["pred_b"]
+    context["abs_rank_diff"] = (context["rank_a"] - context["rank_b"]).abs()
+    context["abs_calibrated_expected_goal_difference"] = (
+        context["calibrated_expected_goals_a"] - context["calibrated_expected_goals_b"]
+    ).abs()
+    context["calibrated_expected_total_goals"] = (
+        context["calibrated_expected_goals_a"] + context["calibrated_expected_goals_b"]
+    )
+    favorite_probabilities = []
+    draw_probabilities = []
+    for match in context.itertuples(index=False):
+        probabilities = summarize_score_probs(
+            match.calibrated_expected_goals_a,
+            match.calibrated_expected_goals_b,
+            max_goals=max_goals,
+            method="independent",
+        )
+        draw_probabilities.append(probabilities["draw"])
+        if match.rank_a < match.rank_b:
+            favorite_probabilities.append(probabilities["team_a_win"])
+        elif match.rank_b < match.rank_a:
+            favorite_probabilities.append(probabilities["team_b_win"])
+        else:
+            favorite_probabilities.append(max(probabilities["team_a_win"], probabilities["team_b_win"]))
+    context["favorite_win_probability"] = favorite_probabilities
+    context["draw_probability"] = draw_probabilities
+    context["rank_diff_bucket"] = pd.cut(
+        context["abs_rank_diff"],
+        bins=[-np.inf, 10, 25, 40, np.inf],
+        labels=["close_0_10", "medium_10_25", "strong_25_40", "large_40_plus"],
+    )
+    context["favorite_win_probability_bucket"] = pd.cut(
+        context["favorite_win_probability"],
+        bins=[-np.inf, 0.45, 0.55, 0.60, np.inf],
+        labels=["low_up_to_0.45", "medium_0.45_0.55", "strong_0.55_0.60", "high_0.60_plus"],
+    )
+    context["expected_goal_difference_bucket"] = pd.cut(
+        context["abs_calibrated_expected_goal_difference"],
+        bins=[-np.inf, 0.2, 0.5, 1.0, np.inf],
+        labels=["close_0_0.2", "small_0.2_0.5", "medium_0.5_1.0", "high_1.0_plus"],
+    )
+    context["expected_total_goals_bucket"] = pd.cut(
+        context["calibrated_expected_total_goals"],
+        bins=[-np.inf, 2.0, 2.5, 3.0, np.inf],
+        labels=["low_up_to_2.0", "medium_2.0_2.5", "high_2.5_3.0", "very_high_3.0_plus"],
+    )
+    context["draw_probability_bucket"] = pd.cut(
+        context["draw_probability"],
+        bins=[-np.inf, 0.25, 0.30, 0.35, np.inf],
+        labels=["low_up_to_0.25", "medium_0.25_0.30", "high_0.30_0.35", "very_high_0.35_plus"],
+    )
+    return context
+
+
+def summarize_bucket_strategy_difference(
+    rows: pd.DataFrame,
+    bucket_name: str,
+    bucket_value: str,
+    rng: np.random.Generator,
+    n_bootstrap: int = BUCKET_BOOTSTRAP_SAMPLES,
+) -> dict[str, object]:
+    """Return paired strategy metrics and bootstrap interval for one bucket."""
+    favorite_points = rows["favorite_1_0_points"].to_numpy(dtype=float)
+    calibrated_points = rows[
+        "calibrated_optimizer_with_favorite_1_0_close_match_fallback_points"
+    ].to_numpy(dtype=float)
+    differences = calibrated_points - favorite_points
+    if len(rows):
+        sample_indexes = rng.integers(0, len(rows), size=(n_bootstrap, len(rows)))
+        bootstrap_means = differences[sample_indexes].mean(axis=1)
+        ci_lower = float(np.quantile(bootstrap_means, 0.025))
+        ci_upper = float(np.quantile(bootstrap_means, 0.975))
+        probability_better = float(np.mean(bootstrap_means > 0))
+    else:
+        ci_lower = np.nan
+        ci_upper = np.nan
+        probability_better = np.nan
+
+    actual_result = [get_result(goals_a, goals_b) for goals_a, goals_b in zip(rows["goals_a"], rows["goals_b"])]
+    favorite_result = [
+        get_result(pred_a, pred_b) for pred_a, pred_b in zip(rows["favorite_pred_a"], rows["favorite_pred_b"])
+    ]
+    calibrated_result = [
+        get_result(pred_a, pred_b)
+        for pred_a, pred_b in zip(rows["calibrated_fallback_pred_a"], rows["calibrated_fallback_pred_b"])
+    ]
+    actual_difference = rows["goals_a"] - rows["goals_b"]
+    favorite_difference = rows["favorite_pred_a"] - rows["favorite_pred_b"]
+    calibrated_difference = rows["calibrated_fallback_pred_a"] - rows["calibrated_fallback_pred_b"]
+    return {
+        "bucket_name": bucket_name,
+        "bucket_value": bucket_value,
+        "match_count": len(rows),
+        "favorite_1_0_avg_points": float(favorite_points.mean()) if len(rows) else np.nan,
+        "calibrated_fallback_avg_points": float(calibrated_points.mean()) if len(rows) else np.nan,
+        "point_difference": float(differences.mean()) if len(rows) else np.nan,
+        "ci_lower_95": ci_lower,
+        "ci_upper_95": ci_upper,
+        "bootstrap_probability_calibrated_better": probability_better,
+        "favorite_1_0_exact_score_rate": float(
+            ((rows["favorite_pred_a"] == rows["goals_a"]) & (rows["favorite_pred_b"] == rows["goals_b"])).mean()
+        ) if len(rows) else np.nan,
+        "calibrated_fallback_exact_score_rate": float(
+            (
+                (rows["calibrated_fallback_pred_a"] == rows["goals_a"])
+                & (rows["calibrated_fallback_pred_b"] == rows["goals_b"])
+            ).mean()
+        ) if len(rows) else np.nan,
+        "favorite_1_0_correct_result_rate": float(np.mean(np.asarray(favorite_result) == np.asarray(actual_result)))
+        if len(rows) else np.nan,
+        "calibrated_fallback_correct_result_rate": float(
+            np.mean(np.asarray(calibrated_result) == np.asarray(actual_result))
+        ) if len(rows) else np.nan,
+        "favorite_1_0_correct_goal_difference_rate": float((favorite_difference == actual_difference).mean())
+        if len(rows) else np.nan,
+        "calibrated_fallback_correct_goal_difference_rate": float(
+            (calibrated_difference == actual_difference).mean()
+        ) if len(rows) else np.nan,
+    }
+
+
+def build_bucket_significance_report(
+    predictions: pd.DataFrame,
+    max_goals: int = 6,
+    n_bootstrap: int = BUCKET_BOOTSTRAP_SAMPLES,
+    random_seed: int = 2026,
+) -> pd.DataFrame:
+    """Compare favorite_1_0 and calibrated fallback across diagnostic buckets."""
+    context = add_bucket_significance_context(predictions, max_goals=max_goals)
+    rng = np.random.default_rng(random_seed)
+    dimensions = {
+        "rank_diff": "rank_diff_bucket",
+        "favorite_win_probability": "favorite_win_probability_bucket",
+        "expected_goal_difference": "expected_goal_difference_bucket",
+        "expected_total_goals": "expected_total_goals_bucket",
+        "draw_probability": "draw_probability_bucket",
+        "world_cup_year": "backtest_year",
+    }
+    report_rows = []
+    for bucket_name, column in dimensions.items():
+        for bucket_value, rows in context.groupby(column, observed=True, dropna=False):
+            report_rows.append(
+                summarize_bucket_strategy_difference(rows, bucket_name, str(bucket_value), rng, n_bootstrap)
+            )
+
+    group_rows = context[context["match_context"].eq("group")]
+    special_masks = {
+        "large_rank_gap": group_rows["abs_rank_diff"].ge(HIGH_MISMATCH_RANK_DIFF),
+        "high_favorite_win_probability": group_rows["favorite_win_probability"].ge(
+            HIGH_MISMATCH_FAVORITE_WIN_PROBABILITY
+        ),
+        "high_expected_goal_difference": group_rows["abs_calibrated_expected_goal_difference"].ge(
+            HIGH_MISMATCH_EXPECTED_GOAL_DIFFERENCE
+        ),
+    }
+    special_masks["combined_all_three"] = (
+        special_masks["large_rank_gap"]
+        & special_masks["high_favorite_win_probability"]
+        & special_masks["high_expected_goal_difference"]
+    )
+    for bucket_value, mask in special_masks.items():
+        report_rows.append(
+            summarize_bucket_strategy_difference(
+                group_rows[mask],
+                "special_high_mismatch_group",
+                bucket_value,
+                rng,
+                n_bootstrap,
+            )
+        )
+    return pd.DataFrame(report_rows)
+
+
+def write_bucket_significance_summary(report: pd.DataFrame, path: str | Path) -> bool:
+    """Save a readable high-mismatch decision summary and return the recommendation flag."""
+    high_mismatch = report[
+        report["bucket_name"].eq("special_high_mismatch_group")
+        & report["bucket_value"].eq("combined_all_three")
+    ].iloc[0]
+    recommend_calibrated_high_mismatch = bool(
+        high_mismatch["point_difference"] > 0 and high_mismatch["ci_lower_95"] > 0
+    )
+    if recommend_calibrated_high_mismatch:
+        recommendation = (
+            "Recommend calibrated optimizer with close-match fallback for high-mismatch 2026 group games; "
+            "keep favorite_1_0 for close games."
+        )
+    else:
+        recommendation = "Keep favorite_1_0 as the default for all 2026 group games."
+    lines = [
+        "Bucket Significance Summary",
+        "===========================",
+        "Comparison: calibrated optimizer with close-match fallback minus favorite_1_0",
+        "",
+        "High-mismatch group-stage thresholds:",
+        f"- large rank gap: abs(rank_diff) >= {HIGH_MISMATCH_RANK_DIFF:.0f}",
+        f"- high favorite win probability: >= {HIGH_MISMATCH_FAVORITE_WIN_PROBABILITY:.2f}",
+        f"- high expected-goal difference: >= {HIGH_MISMATCH_EXPECTED_GOAL_DIFFERENCE:.1f}",
+        "",
+        "Combined high-mismatch group-stage result:",
+        f"- matches: {int(high_mismatch['match_count'])}",
+        f"- favorite_1_0 average points: {high_mismatch['favorite_1_0_avg_points']:.6f}",
+        f"- calibrated fallback average points: {high_mismatch['calibrated_fallback_avg_points']:.6f}",
+        f"- point difference: {high_mismatch['point_difference']:.6f}",
+        f"- paired bootstrap 95% CI: [{high_mismatch['ci_lower_95']:.6f}, {high_mismatch['ci_upper_95']:.6f}]",
+        "",
+        f"Decision: {recommendation}",
+    ]
+    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return recommend_calibrated_high_mismatch
+
+
 def run_walk_forward_backtests(
     output_dir: str | Path = "outputs",
     max_goals: int = 6,
@@ -484,6 +705,12 @@ def run_walk_forward_backtests(
     ]
     significance_report = paired_bootstrap_report(strategy_points)
     significance_report.to_csv(output_path / "strategy_significance_report.csv", index=False)
+    bucket_significance_report = build_bucket_significance_report(predictions, max_goals=max_goals)
+    bucket_significance_report.to_csv(output_path / "bucket_significance_report.csv", index=False)
+    write_bucket_significance_summary(
+        bucket_significance_report,
+        output_path / "bucket_significance_summary.txt",
+    )
     knockout_multiplier = estimate_knockout_context_multiplier(predictions)
     selected_methods = calibration_selection[calibration_selection["selected"]].groupby("method").size().to_dict()
     summary_lines = [
@@ -505,4 +732,5 @@ def run_walk_forward_backtests(
         "hybrid_strategy_comparison": hybrid_comparison,
         "calibration_report": calibration_report,
         "strategy_significance_report": significance_report,
+        "bucket_significance_report": bucket_significance_report,
     }

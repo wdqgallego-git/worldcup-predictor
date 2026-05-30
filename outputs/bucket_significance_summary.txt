@@ -1,0 +1,17 @@
+Bucket Significance Summary
+===========================
+Comparison: calibrated optimizer with close-match fallback minus favorite_1_0
+
+High-mismatch group-stage thresholds:
+- large rank gap: abs(rank_diff) >= 40
+- high favorite win probability: >= 0.60
+- high expected-goal difference: >= 1.0
+
+Combined high-mismatch group-stage result:
+- matches: 12
+- favorite_1_0 average points: 2.750000
+- calibrated fallback average points: 2.666667
+- point difference: -0.083333
+- paired bootstrap 95% CI: [-0.250000, 0.000000]
+
+Decision: Keep favorite_1_0 as the default for all 2026 group games.
