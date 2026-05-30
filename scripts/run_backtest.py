@@ -79,10 +79,17 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
     predictions = outputs["backtest_predictions"]
     metrics = outputs["backtest_metrics"].copy()
     baselines = outputs["backtest_baseline_comparison"].copy()
+    hybrid_comparison = outputs["hybrid_strategy_comparison"].copy()
     assert_true(predictions.groupby("backtest_year").size().eq(64).all(), "Each World Cup must have exactly 64 test matches.")
     assert_true(set(metrics["probability_method"]) == {"independent", "dixon_coles"}, "Both Poisson methods are required.")
     assert_true(REQUIRED_BASELINES.issubset(set(baselines["baseline"])), "Requested baselines are missing.")
-    for file_name in ("backtest_predictions.csv", "backtest_metrics.csv", "backtest_baseline_comparison.csv"):
+    for file_name in (
+        "backtest_predictions.csv",
+        "backtest_metrics.csv",
+        "backtest_baseline_comparison.csv",
+        "hybrid_strategy_diagnostics.csv",
+        "hybrid_strategy_comparison.csv",
+    ):
         assert_true((output_path / file_name).exists(), f"Missing generated output: {file_name}")
     summary = metrics[
         [
@@ -104,6 +111,14 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
     print(overall.sort_values("avg_challenge_points", ascending=False).to_string(index=False))
     print(f"\nWinning method by avg_challenge_points: {winner['baseline']} ({winner['avg_challenge_points']:.6f})")
     overall.to_csv(output_path / "backtest_baseline_overall.csv", index=False)
+    best_hybrid = hybrid_comparison.iloc[0]
+    print("\nBEST HYBRID STRATEGY")
+    print(best_hybrid.to_frame().T.to_string(index=False))
+    if bool(best_hybrid["recommended_strategy"]):
+        print("\nRecommended strategy: use the best historical hybrid rule.")
+    else:
+        print("\nNo hybrid strategy beat favorite_1_0 overall and in at least 2 of 3 World Cups.")
+        print("Historical recommendation remains: favorite_1_0.")
     return summary, baselines
 
 
