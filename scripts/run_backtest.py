@@ -1,10 +1,9 @@
 """Run the full match-level validation and backtesting audit."""
 
+import argparse
 import sys
-import tempfile
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 
@@ -13,8 +12,9 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from backtesting import WORLD_CUP_BACKTESTS, run_match_backtest, run_walk_forward_backtests
+from backtesting import compare_goal_models, run_walk_forward_backtests
 from data_loader import load_rankings, load_results
+from download_data import download_all
 from evaluation import challenge_points
 from features import build_training_table
 from leakage_checks import (
@@ -71,10 +71,10 @@ def run_scoring_audit() -> None:
     print("Challenge-point scoring checks passed.")
 
 
-def build_summary_table() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Run the walk-forward suite and print the requested summary table."""
-    temp_dir = Path(tempfile.mkdtemp(prefix="worldcup_backtest_audit_"))
-    outputs = run_walk_forward_backtests(output_dir=temp_dir)
+def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Run the walk-forward suite, save outputs, and print summary tables."""
+    output_path = Path(output_dir)
+    outputs = run_walk_forward_backtests(output_dir=output_path)
     predictions = outputs["backtest_predictions"]
     metrics = outputs["backtest_metrics"].copy()
     baselines = outputs["backtest_baseline_comparison"].copy()
@@ -82,7 +82,7 @@ def build_summary_table() -> tuple[pd.DataFrame, pd.DataFrame]:
     assert_true(set(metrics["probability_method"]) == {"independent", "dixon_coles"}, "Both Poisson methods are required.")
     assert_true(REQUIRED_BASELINES.issubset(set(baselines["baseline"])), "Requested baselines are missing.")
     for file_name in ("backtest_predictions.csv", "backtest_metrics.csv", "backtest_baseline_comparison.csv"):
-        assert_true((temp_dir / file_name).exists(), f"Missing generated output: {file_name}")
+        assert_true((output_path / file_name).exists(), f"Missing generated output: {file_name}")
     summary = metrics[
         [
             "year", "model_name", "probability_method", "prediction_method", "matches",
@@ -90,7 +90,7 @@ def build_summary_table() -> tuple[pd.DataFrame, pd.DataFrame]:
             "correct_result_rate", "correct_goal_difference_rate",
         ]
     ].rename(columns={"average_challenge_points": "avg_challenge_points"})
-    print(f"Temporary backtest outputs: {temp_dir}")
+    print(f"Backtest outputs: {output_path}")
     print("\nSUMMARY TABLE")
     print(summary.to_string(index=False))
     overall = baselines.groupby("baseline", as_index=False).agg(
@@ -102,15 +102,38 @@ def build_summary_table() -> tuple[pd.DataFrame, pd.DataFrame]:
     print("\nBASELINE WINNER")
     print(overall.sort_values("avg_challenge_points", ascending=False).to_string(index=False))
     print(f"\nWinning method by avg_challenge_points: {winner['baseline']} ({winner['avg_challenge_points']:.6f})")
+    overall.to_csv(output_path / "backtest_baseline_overall.csv", index=False)
     return summary, baselines
 
 
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Run World Cup match-level walk-forward backtests.")
+    parser.add_argument(
+        "--download",
+        action="store_true",
+        help="Refresh raw data before loading it. Existing raw files are used by default.",
+    )
+    parser.add_argument("--output-dir", default="outputs", help="Directory for backtest CSV outputs.")
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    if args.download:
+        download_all()
     results = load_results()
     rankings = load_rankings()
     run_leakage_audit(results, rankings)
     run_scoring_audit()
-    build_summary_table()
+    training_df, feature_cols = build_training_table(results, rankings)
+    model_comparison = compare_goal_models(training_df=training_df, feature_cols=feature_cols)
+    output_path = Path(args.output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    model_comparison.to_csv(output_path / "backtest_goal_model_comparison.csv", index=False)
+    print("\nGOAL MODEL COMPARISON")
+    print(model_comparison.to_string(index=False))
+    build_summary_table(output_dir=output_path)
     print("\nFull validation and backtesting audit passed.")
 
 
