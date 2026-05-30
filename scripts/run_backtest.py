@@ -37,6 +37,7 @@ REQUIRED_BASELINES = {
     "favorite_2_0_if_strong",
     "most_likely_poisson",
     "expected_points_optimized",
+    "expected_points_optimized_with_realistic_aggressive_filter",
 }
 
 

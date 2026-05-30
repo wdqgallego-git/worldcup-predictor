@@ -10,6 +10,9 @@ CORRECT_RESULT_POINTS = 3
 CORRECT_GOAL_DIFFERENCE_BONUS = 1
 DEFAULT_MAX_GOALS = 6
 DEFAULT_AGGRESSIVE_MIN_EV_RATIO = 0.95
+DEFAULT_AGGRESSIVE_MIN_SCORE_PROBABILITY = 0.02
+DEFAULT_AGGRESSIVE_MAX_ADDITIONAL_TOTAL_GOALS = 2
+DEFAULT_AGGRESSIVE_MAX_GOALS_PER_TEAM = 4
 
 
 def get_result(goals_a: int, goals_b: int) -> str:
@@ -117,23 +120,31 @@ def get_aggressive_prediction(
     score_probs: np.ndarray,
     max_goals: int = DEFAULT_MAX_GOALS,
     min_ev_ratio: float = DEFAULT_AGGRESSIVE_MIN_EV_RATIO,
+    min_score_probability: float = DEFAULT_AGGRESSIVE_MIN_SCORE_PROBABILITY,
 ) -> dict[str, object]:
-    """Return an eligible higher-variance alternative while preserving safe EV."""
+    """Return a realistic differentiated alternative while preserving safe EV."""
     if not 0 < min_ev_ratio <= 1:
         raise ValueError("min_ev_ratio must be greater than 0 and no greater than 1.")
+    if not 0 <= min_score_probability <= 1:
+        raise ValueError("min_score_probability must be between 0 and 1.")
 
     candidates = rank_prediction_candidates(score_probs, max_goals=max_goals)
     safe_prediction = candidates[0]
     minimum_expected_points = safe_prediction["expected_points"] * min_ev_ratio
-    eligible = [candidate for candidate in candidates if candidate["expected_points"] >= minimum_expected_points]
-    aggressive = max(
-        eligible,
-        key=lambda candidate: (
-            candidate["pred_a"] + candidate["pred_b"],
-            abs(candidate["goal_difference"]),
-            candidate["expected_points"],
-        ),
-    ).copy()
+    safe_total_goals = safe_prediction["pred_a"] + safe_prediction["pred_b"]
+    safe_goal_difference = abs(safe_prediction["goal_difference"])
+    eligible = [
+        candidate
+        for candidate in candidates
+        if candidate["prediction"] != safe_prediction["prediction"]
+        and candidate["expected_points"] >= minimum_expected_points
+        and candidate["exact_score_probability"] >= min_score_probability
+        and candidate["pred_a"] + candidate["pred_b"]
+        <= safe_total_goals + DEFAULT_AGGRESSIVE_MAX_ADDITIONAL_TOTAL_GOALS
+        and abs(candidate["goal_difference"]) <= safe_goal_difference + 1
+        and max(candidate["pred_a"], candidate["pred_b"]) <= DEFAULT_AGGRESSIVE_MAX_GOALS_PER_TEAM
+    ]
+    aggressive = (eligible[0] if eligible else safe_prediction).copy()
     aggressive["ev_ratio"] = aggressive["expected_points"] / safe_prediction["expected_points"]
     return aggressive
 

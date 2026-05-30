@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_error
 
 from poisson import score_probability_matrix
-from prediction_optimizer import get_result, get_safe_prediction, points_for_prediction
+from prediction_optimizer import get_aggressive_prediction, get_result, get_safe_prediction, points_for_prediction
 
 
 ACTUAL_SCORE_COLUMNS = ["goals_a", "goals_b"]
@@ -141,16 +141,23 @@ def add_baseline_predictions(
         validate_columns(predictions, RANKING_COLUMNS, baseline)
         scores = [ranking_favorite_score(rank_a, rank_b) for rank_a, rank_b in zip(predictions["rank_a"], predictions["rank_b"])]
         predictions[["pred_a", "pred_b"]] = pd.DataFrame(scores, index=predictions.index)
-    elif baseline in {"most_likely_poisson", "expected_points_optimized"}:
+    elif baseline in {
+        "most_likely_poisson",
+        "expected_points_optimized",
+        "expected_points_optimized_with_realistic_aggressive_filter",
+    }:
         validate_columns(predictions, EXPECTED_GOALS_COLUMNS, baseline)
         scores = []
         for expected_a, expected_b in zip(predictions["expected_goals_a"], predictions["expected_goals_b"]):
             probabilities = score_probability_matrix(expected_a, expected_b, max_goals=max_goals)
             if baseline == "most_likely_poisson":
                 scores.append(most_likely_poisson_score(expected_a, expected_b, max_goals=max_goals))
-            else:
+            elif baseline == "expected_points_optimized":
                 safe = get_safe_prediction(probabilities, max_goals=max_goals)
                 scores.append((safe["pred_a"], safe["pred_b"]))
+            else:
+                aggressive = get_aggressive_prediction(probabilities, max_goals=max_goals)
+                scores.append((aggressive["pred_a"], aggressive["pred_b"]))
         predictions[["pred_a", "pred_b"]] = pd.DataFrame(scores, index=predictions.index)
     else:
         raise ValueError(f"Unknown baseline: {baseline}")
@@ -166,6 +173,7 @@ def evaluate_baselines(matches: pd.DataFrame, max_goals: int = 6) -> pd.DataFram
         "favorite_2_0_if_strong",
         "most_likely_poisson",
         "expected_points_optimized",
+        "expected_points_optimized_with_realistic_aggressive_filter",
     ]
     rows = []
     for baseline in baselines:
