@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from itertools import combinations
 from pathlib import Path
 from typing import Callable
 
@@ -16,6 +17,7 @@ TEAMS_PER_GROUP = 4
 DIRECT_QUALIFIERS_PER_GROUP = 2
 BEST_THIRD_PLACE_QUALIFIERS = 8
 KNOCKOUT_TEAMS = 32
+OFFICIAL_THIRD_PLACE_SCENARIOS = 495
 DEFAULT_EXPECTED_GOALS = 1.2
 ROUND_OF_32 = "Round of 32"
 ROUND_OF_16 = "Round of 16"
@@ -203,7 +205,38 @@ def select_round_of_32_teams(group_tables, rng: np.random.Generator | None = Non
     return {"direct_qualifiers": direct_qualifiers, "qualified_third_teams": qualified_thirds}
 
 
-def assign_third_placed_teams_to_bracket(qualified_third_teams, third_place_assignment_matrix=None) -> dict[str, str]:
+def validate_third_place_assignment_matrix(third_place_assignment_matrix) -> pd.DataFrame:
+    """Validate the complete official 495-scenario Annexe C assignment matrix."""
+    matrix = pd.DataFrame(third_place_assignment_matrix).copy()
+    required = {"qualified_third_groups", *[f"slot_{slot}" for slot in range(1, 9)]}
+    missing = sorted(required - set(matrix.columns))
+    if missing:
+        raise ValueError(f"Third-place assignment matrix is missing columns: {missing}")
+    if len(matrix) != OFFICIAL_THIRD_PLACE_SCENARIOS:
+        raise ValueError(
+            f"Official third-place assignment matrix must contain {OFFICIAL_THIRD_PLACE_SCENARIOS} scenarios. "
+            f"Found {len(matrix)}."
+        )
+    expected_scenarios = {"-".join(groups) for groups in combinations("ABCDEFGHIJKL", 8)}
+    matrix["qualified_third_groups"] = matrix["qualified_third_groups"].astype(str).str.replace("/", "-")
+    actual_scenarios = set(matrix["qualified_third_groups"])
+    if actual_scenarios != expected_scenarios:
+        raise ValueError("Third-place assignment matrix does not contain every official eight-group scenario exactly once.")
+    if matrix["qualified_third_groups"].duplicated().any():
+        raise ValueError("Third-place assignment matrix contains duplicate scenarios.")
+    for row in matrix.itertuples(index=False):
+        scenario_groups = set(row.qualified_third_groups.split("-"))
+        assigned_groups = {str(getattr(row, f"slot_{slot}")) for slot in range(1, 9)}
+        if assigned_groups != scenario_groups:
+            raise ValueError(f"Third-place matrix scenario {row.qualified_third_groups} has invalid slot assignments.")
+    return matrix
+
+
+def assign_third_placed_teams_to_bracket(
+    qualified_third_teams,
+    third_place_assignment_matrix=None,
+    allow_development_fallback: bool = False,
+) -> dict[str, str]:
     """Assign eight qualified third-place teams using the official matrix or a development fallback."""
     qualified = pd.DataFrame(qualified_third_teams).copy()
     if len(qualified) != BEST_THIRD_PLACE_QUALIFIERS:
@@ -211,7 +244,8 @@ def assign_third_placed_teams_to_bracket(qualified_third_teams, third_place_assi
     team_by_group = dict(zip(qualified["group"].astype(str), qualified["team"]))
     matrix = pd.DataFrame() if third_place_assignment_matrix is None else pd.DataFrame(third_place_assignment_matrix).copy()
     scenario = "-".join(sorted(team_by_group))
-    if not matrix.empty and "qualified_third_groups" in matrix.columns:
+    if not matrix.empty:
+        matrix = validate_third_place_assignment_matrix(matrix)
         matching = matrix[matrix["qualified_third_groups"].astype(str).str.replace("/", "-") == scenario]
         if not matching.empty:
             assignments = {}
@@ -219,6 +253,12 @@ def assign_third_placed_teams_to_bracket(qualified_third_teams, third_place_assi
                 group = str(matching.iloc[0][f"slot_{slot_number}"])
                 assignments[f"slot_{slot_number}"] = team_by_group[group]
             return assignments
+
+    if not allow_development_fallback:
+        raise ValueError(
+            f"Official third-place assignment is unavailable for scenario {scenario}. "
+            "Development fallback is disabled."
+        )
 
     # Development-only deterministic fallback: fill each official eligible slot with
     # the best still-unassigned qualified third-place team allowed by that slot.
@@ -247,11 +287,19 @@ def assign_third_placed_teams_to_bracket(qualified_third_teams, third_place_assi
     }
 
 
-def build_round_of_32_bracket(group_results, third_place_assignment_matrix=None) -> list[dict[str, object]]:
+def build_round_of_32_bracket(
+    group_results,
+    third_place_assignment_matrix=None,
+    allow_development_fallback: bool = False,
+) -> list[dict[str, object]]:
     """Build the official 16-match Round-of-32 bracket."""
     selection = select_round_of_32_teams(group_results)
     direct = selection["direct_qualifiers"]
-    third_assignments = assign_third_placed_teams_to_bracket(selection["qualified_third_teams"], third_place_assignment_matrix)
+    third_assignments = assign_third_placed_teams_to_bracket(
+        selection["qualified_third_teams"],
+        third_place_assignment_matrix,
+        allow_development_fallback=allow_development_fallback,
+    )
     third_index = 0
     bracket = []
     for match_id, team_a_token, team_b_token in ROUND_OF_32_TEMPLATE:
@@ -296,7 +344,14 @@ def update_team_stats(team_stats, result: dict[str, object]) -> None:
         team_stats[team]["clean_sheets"] += int(goals_against == 0)
 
 
-def run_tournament_simulation(fixtures, match_predictions, third_place_assignment_matrix=None, rng=None) -> pd.DataFrame:
+def run_tournament_simulation(
+    fixtures,
+    match_predictions,
+    third_place_assignment_matrix=None,
+    rng=None,
+    allow_development_fallback: bool = False,
+    knockout_lambda_multiplier: float = 1.0,
+) -> pd.DataFrame:
     """Run one complete World Cup 2026 simulation and return team paths."""
     validate_2026_format()
     rng = rng or np.random.default_rng()
@@ -311,7 +366,11 @@ def run_tournament_simulation(fixtures, match_predictions, third_place_assignmen
     group_stage = simulate_group_stage(fixtures, match_predictions, rng)
     for result in group_stage["match_results"]:
         update_team_stats(team_stats, result)
-    bracket = build_round_of_32_bracket(group_stage["group_tables"], third_place_assignment_matrix)
+    bracket = build_round_of_32_bracket(
+        group_stage["group_tables"],
+        third_place_assignment_matrix,
+        allow_development_fallback=allow_development_fallback,
+    )
     knockout_results = {}
     for match in bracket:
         team_stats[match["team_a"]]["reached_knockouts"] = True
@@ -340,6 +399,8 @@ def run_tournament_simulation(fixtures, match_predictions, third_place_assignmen
             team_stats[team_a][stage_flags[match["round"]]] = True
             team_stats[team_b][stage_flags[match["round"]]] = True
         lambda_a, lambda_b = resolve_xg(team_a, team_b)
+        lambda_a *= knockout_lambda_multiplier
+        lambda_b *= knockout_lambda_multiplier
         result = simulate_knockout_match(team_a, team_b, lambda_a, lambda_b, rng)
         result.update({"match_id": match["match_id"], "round": match["round"]})
         knockout_results[match["match_id"]] = result
@@ -371,6 +432,8 @@ def run_monte_carlo_tournament(
     third_place_assignment_matrix=None,
     random_seed: int = 2026,
     output_dir: str | Path = "outputs",
+    allow_development_fallback: bool = False,
+    knockout_lambda_multiplier: float = 1.0,
 ) -> dict[str, pd.DataFrame]:
     """Run Monte Carlo simulations and write team-path probability outputs."""
     if n_simulations < 1:
@@ -378,7 +441,14 @@ def run_monte_carlo_tournament(
     rng = np.random.default_rng(random_seed)
     paths = []
     for simulation_id in range(1, n_simulations + 1):
-        simulation = run_tournament_simulation(fixtures, match_predictions, third_place_assignment_matrix, rng)
+        simulation = run_tournament_simulation(
+            fixtures,
+            match_predictions,
+            third_place_assignment_matrix,
+            rng,
+            allow_development_fallback=allow_development_fallback,
+            knockout_lambda_multiplier=knockout_lambda_multiplier,
+        )
         simulation.insert(0, "simulation_id", simulation_id)
         paths.append(simulation)
     team_paths = pd.concat(paths, ignore_index=True)

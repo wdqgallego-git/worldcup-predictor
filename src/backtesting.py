@@ -12,6 +12,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from calibration import (
+    add_historical_match_context,
+    add_raw_lambda_columns,
+    apply_lambda_calibration,
+    build_calibration_report,
+    estimate_knockout_context_multiplier,
+    fit_pre_tournament_calibrator,
+    paired_bootstrap_report,
+)
 from data_loader import load_rankings, load_results
 from evaluation import (
     add_baseline_predictions,
@@ -94,6 +103,37 @@ def summarize_prediction_metrics(predictions: pd.DataFrame, label: str, year: in
     }
 
 
+def add_favorite_close_match_fallback(
+    calibrated_predictions: pd.DataFrame,
+    close_match_goal_difference: float = 0.20,
+    max_goals: int = 6,
+) -> pd.DataFrame:
+    """Use favorite_1_0 for calibrated close matches and optimization otherwise."""
+    scored = add_optimized_score_predictions(calibrated_predictions, max_goals=max_goals)
+    favorite = add_baseline_predictions(calibrated_predictions, "favorite_1_0", max_goals=max_goals)
+    close_match = (
+        scored["expected_goals_a"] - scored["expected_goals_b"]
+    ).abs().le(close_match_goal_difference)
+    scored.loc[close_match, ["pred_a", "pred_b"]] = favorite.loc[close_match, ["pred_a", "pred_b"]]
+    return scored
+
+
+def summarize_baseline_metrics(predictions: pd.DataFrame, baseline: str) -> dict[str, object]:
+    """Summarize one already-scored baseline or calibrated strategy."""
+    return {
+        "baseline": baseline,
+        **evaluate_goal_metrics(
+            predictions["goals_a"], predictions["goals_b"], predictions["pred_a"], predictions["pred_b"]
+        ),
+        **evaluate_result_metrics(
+            predictions["goals_a"], predictions["goals_b"], predictions["pred_a"], predictions["pred_b"]
+        ),
+        **evaluate_challenge_points(
+            predictions["goals_a"], predictions["goals_b"], predictions["pred_a"], predictions["pred_b"]
+        ),
+    }
+
+
 def run_match_backtest(
     year: int,
     cutoff_date: str,
@@ -112,11 +152,57 @@ def run_match_backtest(
     training_df, feature_cols = build_training_table(results, rankings)
     models = train_goal_models(training_df, feature_cols, reference_date=str(cutoff.date()))
     fixture_features, _ = build_fixture_features(tournament_matches, results, rankings, feature_cols)
-    predictions = predict_expected_goals(models, fixture_features)
+    predictions = add_raw_lambda_columns(predict_expected_goals(models, fixture_features))
     predictions["backtest_year"] = year
     predictions["model_name"] = models["selected_model_name"]
     independent = add_optimized_score_predictions(predictions, method="independent", max_goals=max_goals)
     dixon_coles = add_optimized_score_predictions(predictions, method="dixon_coles", max_goals=max_goals)
+    calibrator, calibration_selection = fit_pre_tournament_calibrator(
+        training_df,
+        feature_cols,
+        selected_model_name=models["selected_model_name"],
+        reference_date=str(cutoff.date()),
+        max_goals=max_goals,
+    )
+    calibrated_predictions = apply_lambda_calibration(predictions, calibrator)
+    calibrated = add_optimized_score_predictions(calibrated_predictions, max_goals=max_goals)
+    calibrated_fallback = add_favorite_close_match_fallback(calibrated_predictions, max_goals=max_goals)
+    favorite = add_baseline_predictions(predictions, "favorite_1_0", max_goals=max_goals)
+    independent["calibrated_expected_goals_a"] = calibrated["expected_goals_a"]
+    independent["calibrated_expected_goals_b"] = calibrated["expected_goals_b"]
+    independent["calibration_method"] = calibrator.method
+    independent["calibrated_pred_a"] = calibrated["pred_a"]
+    independent["calibrated_pred_b"] = calibrated["pred_b"]
+    independent["calibrated_fallback_pred_a"] = calibrated_fallback["pred_a"]
+    independent["calibrated_fallback_pred_b"] = calibrated_fallback["pred_b"]
+    independent["favorite_1_0_points"] = [
+        points_for_prediction(pred_a, pred_b, int(goals_a), int(goals_b))
+        for pred_a, pred_b, goals_a, goals_b in zip(
+            favorite["pred_a"], favorite["pred_b"], predictions["goals_a"], predictions["goals_b"]
+        )
+    ]
+    independent["uncalibrated_optimizer_points"] = [
+        points_for_prediction(pred_a, pred_b, int(goals_a), int(goals_b))
+        for pred_a, pred_b, goals_a, goals_b in zip(
+            independent["pred_a"], independent["pred_b"], predictions["goals_a"], predictions["goals_b"]
+        )
+    ]
+    independent["calibrated_optimizer_points"] = [
+        points_for_prediction(pred_a, pred_b, int(goals_a), int(goals_b))
+        for pred_a, pred_b, goals_a, goals_b in zip(
+            calibrated["pred_a"], calibrated["pred_b"], predictions["goals_a"], predictions["goals_b"]
+        )
+    ]
+    independent["calibrated_optimizer_with_favorite_1_0_close_match_fallback_points"] = [
+        points_for_prediction(pred_a, pred_b, int(goals_a), int(goals_b))
+        for pred_a, pred_b, goals_a, goals_b in zip(
+            calibrated_fallback["pred_a"],
+            calibrated_fallback["pred_b"],
+            predictions["goals_a"],
+            predictions["goals_b"],
+        )
+    ]
+    independent = add_historical_match_context(independent)
     metrics = pd.DataFrame(
         [
             summarize_prediction_metrics(independent, "expected_points_independent", year),
@@ -125,6 +211,16 @@ def run_match_backtest(
     )
     baseline_input = predictions.copy()
     baselines = evaluate_baselines(baseline_input, max_goals=max_goals)
+    calibrated_rows = pd.DataFrame(
+        [
+            summarize_baseline_metrics(calibrated, "calibrated_expected_points_optimized"),
+            summarize_baseline_metrics(
+                calibrated_fallback,
+                "calibrated_optimizer_with_favorite_1_0_close_match_fallback",
+            ),
+        ]
+    )
+    baselines = pd.concat([baselines, calibrated_rows], ignore_index=True)
     baselines.insert(0, "year", year)
     return {
         "predictions": independent,
@@ -133,6 +229,7 @@ def run_match_backtest(
         "baseline_comparison": baselines,
         "selected_model_name": models["selected_model_name"],
         "feature_cols": feature_cols,
+        "calibration_selection": calibration_selection.assign(year=year),
     }
 
 
@@ -171,7 +268,7 @@ def compare_goal_models(
 
 def add_hybrid_strategy_context(predictions: pd.DataFrame, max_goals: int = 6) -> pd.DataFrame:
     """Add transparent match-type diagnostics used by the hybrid search."""
-    context = predictions.copy()
+    context = predictions.drop(columns=["favorite_1_0_points", "optimized_points"], errors="ignore").copy()
     favorite_predictions = add_baseline_predictions(context, "favorite_1_0", max_goals=max_goals)
     rows = []
     for match, favorite in zip(context.itertuples(index=False), favorite_predictions.itertuples(index=False)):
@@ -354,15 +451,18 @@ def run_walk_forward_backtests(
     prediction_frames = []
     metric_frames = []
     baseline_frames = []
+    calibration_selection_frames = []
     for year, cutoff_date in WORLD_CUP_BACKTESTS.items():
         backtest = run_match_backtest(year, cutoff_date, results=results, rankings=rankings, max_goals=max_goals)
         prediction_frames.append(backtest["predictions"])
         metric_frames.append(backtest["metrics"])
         baseline_frames.append(backtest["baseline_comparison"])
+        calibration_selection_frames.append(backtest["calibration_selection"])
 
     predictions = pd.concat(prediction_frames, ignore_index=True)
     metrics = pd.concat(metric_frames, ignore_index=True)
     baselines = pd.concat(baseline_frames, ignore_index=True)
+    calibration_selection = pd.concat(calibration_selection_frames, ignore_index=True)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     predictions.to_csv(output_path / "backtest_predictions.csv", index=False)
@@ -372,10 +472,37 @@ def run_walk_forward_backtests(
     hybrid_comparison = search_hybrid_strategies(predictions, max_goals=max_goals)
     diagnostics.to_csv(output_path / "hybrid_strategy_diagnostics.csv", index=False)
     hybrid_comparison.to_csv(output_path / "hybrid_strategy_comparison.csv", index=False)
+    calibration_report = build_calibration_report(predictions)
+    calibration_report.to_csv(output_path / "calibration_report.csv", index=False)
+    strategy_points = predictions[
+        [
+            "favorite_1_0_points",
+            "uncalibrated_optimizer_points",
+            "calibrated_optimizer_points",
+            "calibrated_optimizer_with_favorite_1_0_close_match_fallback_points",
+        ]
+    ]
+    significance_report = paired_bootstrap_report(strategy_points)
+    significance_report.to_csv(output_path / "strategy_significance_report.csv", index=False)
+    knockout_multiplier = estimate_knockout_context_multiplier(predictions)
+    selected_methods = calibration_selection[calibration_selection["selected"]].groupby("method").size().to_dict()
+    summary_lines = [
+        "Expected-Goals Calibration Summary",
+        "==================================",
+        f"selected_methods_by_backtest_year: {selected_methods}",
+        f"constrained_knockout_lambda_multiplier: {knockout_multiplier:.6f}",
+        "default_calibration: bounded linear lambda_adj = a + b * lambda_raw",
+        "isotonic_policy: select only after an out-of-sample challenge-points win with stable high-lambda bias",
+        "",
+        "Group context is evaluated first. Knockout adjustment is constrained to [0.95, 1.05].",
+    ]
+    (output_path / "calibration_summary.txt").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
     return {
         "backtest_predictions": predictions,
         "backtest_metrics": metrics,
         "backtest_baseline_comparison": baselines,
         "hybrid_strategy_diagnostics": diagnostics,
         "hybrid_strategy_comparison": hybrid_comparison,
+        "calibration_report": calibration_report,
+        "strategy_significance_report": significance_report,
     }

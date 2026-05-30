@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -31,10 +32,16 @@ from player_data import (
 )
 from poisson import score_probability_matrix
 from prediction_optimizer import summarize_match_strategy
-from tournament_simulator import run_tournament_simulation, validate_2026_format
+from tournament_simulator import (
+    assign_third_placed_teams_to_bracket,
+    run_tournament_simulation,
+    validate_2026_format,
+    validate_third_place_assignment_matrix,
+)
 
 
 OUTPUT_PATH = PROJECT_ROOT / "outputs" / "smoke_test_predictions.csv"
+THIRD_PLACE_MATRIX_PATH = PROJECT_ROOT / "data" / "raw" / "third_place_assignment_matrix.csv"
 SMOKE_TRAINING_ROWS = 1_500
 
 
@@ -48,9 +55,32 @@ def validate_scoring_rules() -> None:
         raise AssertionError(f"Missing scoring rules: {sorted(missing_awards)}")
 
 
+def validate_official_matrix_contract() -> pd.DataFrame:
+    """Prove final mode rejects fallback while development mode remains explicit."""
+    matrix = validate_third_place_assignment_matrix(pd.read_csv(THIRD_PLACE_MATRIX_PATH, comment="#"))
+    qualified = pd.DataFrame(
+        {"group": list("ABCDEFGH"), "team": [f"Third {group}" for group in "ABCDEFGH"]}
+    )
+    try:
+        assign_third_placed_teams_to_bracket(qualified, pd.DataFrame())
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Final mode silently used the development third-place fallback.")
+    fallback = assign_third_placed_teams_to_bracket(
+        qualified,
+        pd.DataFrame(),
+        allow_development_fallback=True,
+    )
+    if len(fallback) != 8:
+        raise AssertionError("Explicit development fallback assignment failed.")
+    return matrix
+
+
 def main() -> None:
     validate_2026_format()
     validate_scoring_rules()
+    third_place_matrix = validate_official_matrix_contract()
 
     results = load_results()
     rankings = load_rankings()
@@ -74,6 +104,7 @@ def main() -> None:
     tournament_paths = run_tournament_simulation(
         fixtures,
         fixture_predictions.loc[fixture_predictions["stage"].eq("group_stage")],
+        third_place_assignment_matrix=third_place_matrix,
         rng=np.random.default_rng(2026),
     )
     tournament_paths.insert(0, "simulation_id", 1)

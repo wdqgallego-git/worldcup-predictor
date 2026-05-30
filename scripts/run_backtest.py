@@ -80,6 +80,8 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
     metrics = outputs["backtest_metrics"].copy()
     baselines = outputs["backtest_baseline_comparison"].copy()
     hybrid_comparison = outputs["hybrid_strategy_comparison"].copy()
+    calibration_report = outputs["calibration_report"].copy()
+    significance_report = outputs["strategy_significance_report"].copy()
     assert_true(predictions.groupby("backtest_year").size().eq(64).all(), "Each World Cup must have exactly 64 test matches.")
     assert_true(set(metrics["probability_method"]) == {"independent", "dixon_coles"}, "Both Poisson methods are required.")
     assert_true(REQUIRED_BASELINES.issubset(set(baselines["baseline"])), "Requested baselines are missing.")
@@ -89,6 +91,9 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
         "backtest_baseline_comparison.csv",
         "hybrid_strategy_diagnostics.csv",
         "hybrid_strategy_comparison.csv",
+        "calibration_report.csv",
+        "calibration_summary.txt",
+        "strategy_significance_report.csv",
     ):
         assert_true((output_path / file_name).exists(), f"Missing generated output: {file_name}")
     summary = metrics[
@@ -119,6 +124,10 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
     else:
         print("\nNo hybrid strategy beat favorite_1_0 overall and in at least 2 of 3 World Cups.")
         print("Historical recommendation remains: favorite_1_0.")
+    print("\nCALIBRATION REPORT")
+    print(calibration_report.to_string(index=False))
+    print("\nPAIRED BOOTSTRAP STRATEGY DIFFERENCES VS FAVORITE_1_0")
+    print(significance_report.to_string(index=False))
     return summary, baselines
 
 
