@@ -7,6 +7,7 @@ import os
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 
@@ -107,18 +108,23 @@ def optimize_fixture_predictions(fixture_predictions: pd.DataFrame) -> pd.DataFr
         strategy = summarize_match_strategy(probabilities["score_probs"], max_goals=MAX_GOALS_FINAL)
         safe = strategy["safe_prediction"]
         aggressive = strategy["aggressive_prediction"]
+        most_likely_goals = np.unravel_index(
+            np.argmax(probabilities["score_probs"]),
+            probabilities["score_probs"].shape,
+        )
         rows.append(
             {
                 "match_id": fixture.match_id,
-                "team_a_win_probability": probabilities["team_a_win"],
-                "draw_probability": probabilities["draw"],
-                "team_b_win_probability": probabilities["team_b_win"],
+                "most_likely_score": f"{most_likely_goals[0]}-{most_likely_goals[1]}",
+                "p_team_a_win": probabilities["team_a_win"],
+                "p_draw": probabilities["draw"],
+                "p_team_b_win": probabilities["team_b_win"],
                 "optimized_score_a": safe["pred_a"],
                 "optimized_score_b": safe["pred_b"],
-                "optimized_score": safe["prediction"],
+                "safe_prediction": safe["prediction"],
                 "optimized_result": safe["result"],
-                "optimized_expected_points": safe["expected_points"],
-                "aggressive_score": aggressive["prediction"],
+                "safe_expected_points": safe["expected_points"],
+                "aggressive_prediction": aggressive["prediction"],
                 "aggressive_expected_points": aggressive["expected_points"],
                 "aggressive_ev_ratio": aggressive["ev_ratio"],
             }
@@ -139,15 +145,16 @@ def select_final_prediction_columns(predictions: pd.DataFrame) -> pd.DataFrame:
         "team_b",
         "expected_goals_a",
         "expected_goals_b",
-        "team_a_win_probability",
-        "draw_probability",
-        "team_b_win_probability",
+        "most_likely_score",
+        "p_team_a_win",
+        "p_draw",
+        "p_team_b_win",
         "optimized_score_a",
         "optimized_score_b",
-        "optimized_score",
+        "safe_prediction",
         "optimized_result",
-        "optimized_expected_points",
-        "aggressive_score",
+        "safe_expected_points",
+        "aggressive_prediction",
         "aggressive_expected_points",
         "aggressive_ev_ratio",
     ]
