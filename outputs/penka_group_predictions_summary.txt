@@ -1,0 +1,17 @@
+2026 Group Stage Penka Predictions
+==================================
+matches: 72
+manual_adjustments_applied: 0
+exact_score_tiebreak_changes: 3
+
+IMPORTANT: These are refreshable baseline recommendations, not final submissions.
+Penka permits match predictions until 1 minute before kickoff. Refresh rankings, injuries, suspensions,
+confirmed lineups, rotation, goalkeeper changes, and matchday-3 incentives before each match.
+
+recommended_score_counts:
+recommended_score
+0-1    28
+1-0    29
+1-1     1
+2-0    12
+2-1     2

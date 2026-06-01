@@ -1,0 +1,6 @@
+Penka Lambda Calibration Summary
+================================
+Calibration is compared using real mutually exclusive Penka points, exact-score rate, category rates,
+overall mean total goals, top-lambda decile behavior, and modal score calibration.
+excluded_unknown_phase_rows: 0
+best_method_by_average_penka_points: isotonic

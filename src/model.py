@@ -17,6 +17,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from config import MODEL_PARAMS_POISSON_HGB, MODEL_PARAMS_SQUARED_HGB, PREDICTION_REFERENCE_DATE
+from penka_scoring import GROUP, score_prediction
 
 
 MIN_EXPECTED_GOALS = 0.05
@@ -24,8 +25,6 @@ MAX_EXPECTED_GOALS = 6.0
 RECENCY_HALF_LIFE_DAYS = 730.0
 VALIDATION_FRACTION = 0.20
 SCORE_GRID_MAX_GOALS = 6
-EXACT_SCORE_POINTS = 3
-CORRECT_RESULT_POINTS = 1
 TARGET_COLUMNS = ["goals_a", "goals_b"]
 
 
@@ -170,14 +169,17 @@ def match_result(goals_a: float, goals_b: float) -> str:
 
 
 def historical_challenge_points(actual_a, actual_b, expected_a, expected_b) -> float:
-    """Return average score-prediction points after Poisson score optimization."""
+    """Return group-stage Penka points for validation score modes."""
     total_points = 0
     for goals_a, goals_b, lambda_a, lambda_b in zip(actual_a, actual_b, expected_a, expected_b):
         predicted_a, predicted_b = optimize_scoreline(lambda_a, lambda_b)
-        if predicted_a == goals_a and predicted_b == goals_b:
-            total_points += EXACT_SCORE_POINTS
-        elif match_result(predicted_a, predicted_b) == match_result(goals_a, goals_b):
-            total_points += CORRECT_RESULT_POINTS
+        total_points += score_prediction(
+            predicted_a,
+            predicted_b,
+            int(goals_a),
+            int(goals_b),
+            GROUP,
+        )
     return total_points / len(expected_a)
 
 

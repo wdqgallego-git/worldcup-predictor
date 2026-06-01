@@ -1,0 +1,10 @@
+Award Readiness Summary
+=======================
+status: NOT SUBMISSION READY - SAMPLE PLAYER DATA OR SYNTHETIC PATHS
+sample_player_data_used: True
+synthetic_team_paths_used: False
+champion_source: champion_probability from simulated champion outcomes
+runner_up_source: runner_up_probability from simulated runner_up flag, not finalist probability
+top_scorer_model: direct player simulation with separate penalty model and Golden Boot tie-breaks
+mvp_model: transparent fixed heuristic weights
+golden_glove_model: transparent fixed heuristic weights; not auto-assigned to champion keeper

@@ -137,6 +137,9 @@ def is_placeholder_team(name: object) -> bool:
         or normalized_name.startswith("winner ")
         or normalized_name.startswith("runner-up ")
         or normalized_name.startswith("loser ")
+        or re.fullmatch(r"[12][a-l]", normalized_name) is not None
+        or re.fullmatch(r"3[a-l](?:/[a-l])+", normalized_name) is not None
+        or re.fullmatch(r"[wl]\d+", normalized_name) is not None
     )
 
 

@@ -10,6 +10,7 @@ from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_er
 
 from poisson import score_probability_matrix
 from prediction_optimizer import get_aggressive_prediction, get_result, get_safe_prediction, points_for_prediction
+from penka_scoring import GROUP, prediction_category
 
 
 ACTUAL_SCORE_COLUMNS = ["goals_a", "goals_b"]
@@ -29,9 +30,9 @@ def validate_columns(df: pd.DataFrame, required_columns, dataset_name: str) -> N
         )
 
 
-def challenge_points(pred_a: int, pred_b: int, actual_a: int, actual_b: int) -> int:
-    """Return match challenge points using the shared scoring rule."""
-    return points_for_prediction(pred_a, pred_b, actual_a, actual_b)
+def challenge_points(pred_a: int, pred_b: int, actual_a: int, actual_b: int, phase: str = GROUP) -> int:
+    """Return real, mutually exclusive Penka match points."""
+    return points_for_prediction(pred_a, pred_b, actual_a, actual_b, phase=phase)
 
 
 def poisson_negative_log_likelihood(actual_goals, expected_goals) -> float:
@@ -90,10 +91,18 @@ def evaluate_challenge_points(
     actual_b,
     predicted_a,
     predicted_b,
+    phases=None,
 ) -> dict[str, float]:
-    """Evaluate total and average challenge points."""
+    """Evaluate real Penka points and mutually exclusive scoring categories."""
+    phases = [GROUP] * len(actual_a) if phases is None else phases
     points = [
-        challenge_points(pred_a, pred_b, actual_goals_a, actual_goals_b)
+        challenge_points(pred_a, pred_b, actual_goals_a, actual_goals_b, phase=phase)
+        for actual_goals_a, actual_goals_b, pred_a, pred_b, phase in zip(
+            actual_a, actual_b, predicted_a, predicted_b, phases
+        )
+    ]
+    categories = [
+        prediction_category(int(pred_a), int(pred_b), int(actual_goals_a), int(actual_goals_b))
         for actual_goals_a, actual_goals_b, pred_a, pred_b in zip(actual_a, actual_b, predicted_a, predicted_b)
     ]
     return {
@@ -102,6 +111,9 @@ def evaluate_challenge_points(
         "exact_score_rate": float(np.mean([pred_a == actual_goals_a and pred_b == actual_goals_b for actual_goals_a, actual_goals_b, pred_a, pred_b in zip(actual_a, actual_b, predicted_a, predicted_b)])),
         "correct_result_rate": float(np.mean([get_result(pred_a, pred_b) == get_result(actual_goals_a, actual_goals_b) for actual_goals_a, actual_goals_b, pred_a, pred_b in zip(actual_a, actual_b, predicted_a, predicted_b)])),
         "correct_goal_difference_rate": float(np.mean([pred_a - pred_b == actual_goals_a - actual_goals_b for actual_goals_a, actual_goals_b, pred_a, pred_b in zip(actual_a, actual_b, predicted_a, predicted_b)])),
+        "correct_goal_difference_or_draw_rate": float(np.mean([category == "correct_goal_difference_or_draw" for category in categories])),
+        "correct_winner_only_rate": float(np.mean([category == "correct_winner" for category in categories])),
+        "wrong_rate": float(np.mean([category == "wrong" for category in categories])),
     }
 
 
@@ -121,6 +133,13 @@ def ranking_favorite_score(rank_a: float, rank_b: float, strong_favorite_rank_ga
     return (favorite_score, 0) if rank_a < rank_b else (0, favorite_score)
 
 
+def orient_favorite_score(rank_a: float, rank_b: float, favorite_goals: int, underdog_goals: int = 0) -> tuple[int, int]:
+    """Orient one fixed-score rule toward the FIFA-ranking favorite."""
+    if pd.isna(rank_a) or pd.isna(rank_b) or rank_a == rank_b:
+        return 1, 1
+    return (favorite_goals, underdog_goals) if rank_a < rank_b else (underdog_goals, favorite_goals)
+
+
 def add_baseline_predictions(
     matches: pd.DataFrame,
     baseline: str,
@@ -130,10 +149,22 @@ def add_baseline_predictions(
     predictions = matches.copy()
     if baseline == "always_1_1":
         predictions["pred_a"], predictions["pred_b"] = 1, 1
+    elif baseline in {"draw_0_0", "draw_1_1"}:
+        score = 0 if baseline == "draw_0_0" else 1
+        predictions["pred_a"], predictions["pred_b"] = score, score
     elif baseline == "favorite_1_0":
         validate_columns(predictions, RANKING_COLUMNS, baseline)
+        scores = [orient_favorite_score(rank_a, rank_b, 1, 0) for rank_a, rank_b in zip(predictions["rank_a"], predictions["rank_b"])]
+        predictions[["pred_a", "pred_b"]] = pd.DataFrame(scores, index=predictions.index)
+    elif baseline in {"favorite_2_0", "favorite_2_1", "favorite_3_0"}:
+        validate_columns(predictions, RANKING_COLUMNS, baseline)
+        favorite_goals, underdog_goals = {
+            "favorite_2_0": (2, 0),
+            "favorite_2_1": (2, 1),
+            "favorite_3_0": (3, 0),
+        }[baseline]
         scores = [
-            (1, 1) if pd.isna(rank_a) or pd.isna(rank_b) or rank_a == rank_b else (1, 0) if rank_a < rank_b else (0, 1)
+            orient_favorite_score(rank_a, rank_b, favorite_goals, underdog_goals)
             for rank_a, rank_b in zip(predictions["rank_a"], predictions["rank_b"])
         ]
         predictions[["pred_a", "pred_b"]] = pd.DataFrame(scores, index=predictions.index)
@@ -148,15 +179,16 @@ def add_baseline_predictions(
     }:
         validate_columns(predictions, EXPECTED_GOALS_COLUMNS, baseline)
         scores = []
-        for expected_a, expected_b in zip(predictions["expected_goals_a"], predictions["expected_goals_b"]):
+        phases = predictions["penka_phase"] if "penka_phase" in predictions.columns else pd.Series(GROUP, index=predictions.index)
+        for expected_a, expected_b, phase in zip(predictions["expected_goals_a"], predictions["expected_goals_b"], phases):
             probabilities = score_probability_matrix(expected_a, expected_b, max_goals=max_goals)
             if baseline == "most_likely_poisson":
                 scores.append(most_likely_poisson_score(expected_a, expected_b, max_goals=max_goals))
             elif baseline == "expected_points_optimized":
-                safe = get_safe_prediction(probabilities, max_goals=max_goals)
+                safe = get_safe_prediction(probabilities, max_goals=max_goals, phase=phase)
                 scores.append((safe["pred_a"], safe["pred_b"]))
             else:
-                aggressive = get_aggressive_prediction(probabilities, max_goals=max_goals)
+                aggressive = get_aggressive_prediction(probabilities, max_goals=max_goals, phase=phase)
                 scores.append((aggressive["pred_a"], aggressive["pred_b"]))
         predictions[["pred_a", "pred_b"]] = pd.DataFrame(scores, index=predictions.index)
     else:
@@ -169,7 +201,12 @@ def evaluate_baselines(matches: pd.DataFrame, max_goals: int = 6) -> pd.DataFram
     validate_columns(matches, ACTUAL_SCORE_COLUMNS, "matches")
     baselines = [
         "always_1_1",
+        "draw_0_0",
+        "draw_1_1",
         "favorite_1_0",
+        "favorite_2_0",
+        "favorite_2_1",
+        "favorite_3_0",
         "favorite_2_0_if_strong",
         "most_likely_poisson",
         "expected_points_optimized",
@@ -186,7 +223,8 @@ def evaluate_baselines(matches: pd.DataFrame, max_goals: int = 6) -> pd.DataFram
                 predictions["goals_a"], predictions["goals_b"], predictions["pred_a"], predictions["pred_b"]
             ),
             **evaluate_challenge_points(
-                predictions["goals_a"], predictions["goals_b"], predictions["pred_a"], predictions["pred_b"]
+                predictions["goals_a"], predictions["goals_b"], predictions["pred_a"], predictions["pred_b"],
+                predictions["penka_phase"] if "penka_phase" in predictions.columns else None,
             ),
         }
         rows.append({"baseline": baseline, **metrics})

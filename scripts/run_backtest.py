@@ -16,6 +16,8 @@ from backtesting import compare_goal_models, run_walk_forward_backtests
 from data_loader import load_rankings, load_results
 from download_data import download_all
 from evaluation import challenge_points
+from penka_backtesting import run_penka_backtesting_reports
+from penka_scoring import GROUP, QUARTER_FINAL, ROUND_OF_32, validate_penka_scoring_examples
 from features import build_training_table
 from leakage_checks import (
     check_no_future_matches_used,
@@ -24,6 +26,10 @@ from leakage_checks import (
     check_no_target_columns_in_features,
     check_ranking_dates_before_match,
 )
+from margin_analysis import run_margin_distribution_analysis
+from elo_analysis import run_elo_analysis
+from ml_policy_analysis import run_ml_policy_analysis
+from rule_b_analysis import run_rule_b_verification
 
 
 AUDIT_CUTOFFS = {
@@ -65,11 +71,15 @@ def run_leakage_audit(results: pd.DataFrame, rankings: pd.DataFrame) -> None:
 
 
 def run_scoring_audit() -> None:
-    """Verify exact-score and bonus scoring semantics."""
-    assert_true(challenge_points(2, 1, 2, 1) == 5, "Exact score must be 5 total points.")
-    assert_true(challenge_points(2, 0, 3, 0) == 3, "Correct result without goal-difference bonus must be 3 points.")
-    assert_true(challenge_points(2, 1, 3, 2) == 4, "Correct goal difference must add exactly 1 point.")
-    print("Challenge-point scoring checks passed.")
+    """Verify mutually exclusive, phase-aware Penka scoring semantics."""
+    validate_penka_scoring_examples()
+    assert_true(challenge_points(2, 1, 2, 1, GROUP) == 5, "Group exact score must be 5 points.")
+    assert_true(challenge_points(3, 1, 2, 0, GROUP) == 3, "Group goal difference must be 3 points.")
+    assert_true(challenge_points(1, 0, 2, 0, GROUP) == 2, "Group correct winner must be 2 points.")
+    assert_true(challenge_points(2, 0, 2, 0, ROUND_OF_32) == 8, "Round-of-32 exact score must be 8 points.")
+    assert_true(challenge_points(1, 0, 2, 0, ROUND_OF_32) == 3, "Round-of-32 winner must be 3 points.")
+    assert_true(challenge_points(3, 1, 2, 0, QUARTER_FINAL) == 7, "Quarter-final goal difference must be 7 points.")
+    print("Real Penka phase-specific scoring checks passed.")
 
 
 def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -82,7 +92,6 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
     hybrid_comparison = outputs["hybrid_strategy_comparison"].copy()
     calibration_report = outputs["calibration_report"].copy()
     significance_report = outputs["strategy_significance_report"].copy()
-    bucket_significance_report = outputs["bucket_significance_report"].copy()
     assert_true(predictions.groupby("backtest_year").size().eq(64).all(), "Each World Cup must have exactly 64 test matches.")
     assert_true(set(metrics["probability_method"]) == {"independent", "dixon_coles"}, "Both Poisson methods are required.")
     assert_true(REQUIRED_BASELINES.issubset(set(baselines["baseline"])), "Requested baselines are missing.")
@@ -95,8 +104,6 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
         "calibration_report.csv",
         "calibration_summary.txt",
         "strategy_significance_report.csv",
-        "bucket_significance_report.csv",
-        "bucket_significance_summary.txt",
     ):
         assert_true((output_path / file_name).exists(), f"Missing generated output: {file_name}")
     summary = metrics[
@@ -123,21 +130,14 @@ def build_summary_table(output_dir: str | Path = "outputs") -> tuple[pd.DataFram
     print("\nBEST HYBRID STRATEGY")
     print(best_hybrid.to_frame().T.to_string(index=False))
     if bool(best_hybrid["recommended_strategy"]):
-        print("\nRecommended strategy: use the best historical hybrid rule.")
+        print("\nLegacy hybrid diagnostic: candidate improved in this auxiliary report.")
     else:
-        print("\nNo hybrid strategy beat favorite_1_0 overall and in at least 2 of 3 World Cups.")
-        print("Historical recommendation remains: favorite_1_0.")
+        print("\nLegacy hybrid diagnostic: no threshold rule beat favorite_1_0 overall and in at least 2 of 3 World Cups.")
+    print("Use the authoritative real-Penka reports below for match recommendations.")
     print("\nCALIBRATION REPORT")
     print(calibration_report.to_string(index=False))
     print("\nPAIRED BOOTSTRAP STRATEGY DIFFERENCES VS FAVORITE_1_0")
     print(significance_report.to_string(index=False))
-    print("\nHIGH-MISMATCH GROUP-STAGE SIGNIFICANCE")
-    high_mismatch = bucket_significance_report[
-        bucket_significance_report["bucket_name"].eq("special_high_mismatch_group")
-    ]
-    print(high_mismatch.to_string(index=False))
-    print("\nBUCKET SIGNIFICANCE DECISION")
-    print((output_path / "bucket_significance_summary.txt").read_text(encoding="utf-8"))
     return summary, baselines
 
 
@@ -169,6 +169,45 @@ def main() -> None:
     print("\nGOAL MODEL COMPARISON")
     print(model_comparison.to_string(index=False))
     build_summary_table(output_dir=output_path)
+    print("\nREAL PENKA STRATEGY AND CALIBRATION REPORTS")
+    penka_outputs = run_penka_backtesting_reports(
+        pd.read_csv(output_path / "backtest_predictions.csv"),
+        output_dir=output_path,
+    )
+    assert_true((output_path / "penka_strategy_backtest_comparison.csv").exists(), "Missing focused Penka strategy CSV.")
+    assert_true((output_path / "penka_strategy_summary.txt").exists(), "Missing focused Penka strategy summary.")
+    print(penka_outputs["penka_scoring_strategy_comparison"].to_string(index=False))
+    print("\nFOCUSED PENKA GROUP STRATEGY REPLACEMENT TEST")
+    print(penka_outputs["penka_strategy_backtest_comparison"].to_string(index=False))
+    print("\nFOCUSED PENKA GROUP STRATEGY DECISION")
+    print((output_path / "penka_strategy_summary.txt").read_text(encoding="utf-8"))
+    print("\nREAL PENKA STRATEGY DECISION")
+    print((output_path / "penka_scoring_summary.txt").read_text(encoding="utf-8"))
+    print("\nFULL-HISTORY WINNING-MARGIN ANALYSIS")
+    margin_outputs = run_margin_distribution_analysis(results, rankings, output_dir=output_path)
+    print(margin_outputs["sample_counts"].to_string(index=False))
+    print("\nFIXED-SCORE RULE DECISION")
+    print((output_path / "fixed_score_rule_summary.txt").read_text(encoding="utf-8"))
+    print("\nCAUSAL ELO DIAGNOSTIC")
+    elo_outputs = run_elo_analysis(results, output_dir=output_path)
+    print(elo_outputs["elo_margin_distribution"].to_string(index=False))
+    print("\nCAUSAL ELO FIXED-SCORE DECISION")
+    print((output_path / "elo_margin_summary.txt").read_text(encoding="utf-8"))
+    print("\nRULE B ADVISORY VERIFICATION")
+    rule_b_outputs = run_rule_b_verification(results, rankings, output_dir=output_path)
+    print(rule_b_outputs["two_zero_axis_convergence"].to_string(index=False))
+    print("\nRULE B ADVISORY DECISION")
+    print((output_path / "rule_b_decision_summary.txt").read_text(encoding="utf-8"))
+    print("\nDIRECT CONTEST-SCORE ML POLICY")
+    policy_outputs = run_ml_policy_analysis(results, rankings, output_dir=output_path)
+    policy_overall = policy_outputs["ml_policy_strategy_comparison"]
+    policy_overall = policy_overall[
+        policy_overall["scope"].eq("full_history_walk_forward")
+        & policy_overall["dimension"].eq("overall")
+    ]
+    print(policy_overall.to_string(index=False))
+    print("\nDIRECT CONTEST-SCORE ML POLICY DECISION")
+    print((output_path / "ml_policy_summary.txt").read_text(encoding="utf-8"))
     print("\nFull validation and backtesting audit passed.")
 
 

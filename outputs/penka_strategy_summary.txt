@@ -1,0 +1,16 @@
+Penka Group Strategy Replacement Summary
+========================================
+Strategy under test: selected pre-tournament lambda calibration -> independent Poisson matrix
+-> real group-phase Penka EV optimizer with max_goals=5, regular score caps, and exact-score tie-break window 0.03.
+
+favorite_1_0_average_penka_points: 1.756944
+penka_group_strategy_average_penka_points: 1.666667
+penka_group_strategy_difference_vs_favorite_1_0: -0.090278
+paired_bootstrap_95_ci_vs_favorite_1_0: [-0.284722, 0.090278]
+world_cups_beating_favorite_1_0: 0/3 (none)
+beats_favorite_1_0_overall: False
+positive_bootstrap_ci: False
+replace_pure_favorite_1_0_baseline: False
+
+Decision: keep oriented favorite_1_0 as the validated default submission baseline.
+Use penka_group_predictions.csv as a refreshable analytical review file, not an automatic final submission file.

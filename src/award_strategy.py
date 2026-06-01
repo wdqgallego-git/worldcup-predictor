@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from contest_config import AWARD_POINTS
+
 
 DEFAULT_SCORING_RULES_PATH = "data/raw/company_scoring_rules.csv"
 DEFAULT_OUTPUT_DIR = "outputs"
@@ -42,6 +44,9 @@ def load_scoring_rules(path: str | Path = DEFAULT_SCORING_RULES_PATH) -> pd.Data
     rules["points"] = pd.to_numeric(rules["points"], errors="raise")
     if rules["category"].duplicated().any():
         raise ValueError("company scoring rules contains duplicate categories.")
+    loaded = rules.set_index("category")["points"].astype(float).to_dict()
+    if loaded != {category: float(points) for category, points in AWARD_POINTS.items()}:
+        raise ValueError(f"company scoring rules must match the confirmed Penka award points: {AWARD_POINTS}")
     return rules
 
 
@@ -147,7 +152,11 @@ def build_award_picks(expected_points: pd.DataFrame) -> pd.DataFrame:
     picks = []
     for category, candidates in expected_points.groupby("category", sort=False):
         safe = select_safe_pick(candidates)
-        strategic = select_strategic_pick(candidates)
+        strategic = select_strategic_pick(
+            candidates,
+            min_ev_ratio=0.85 if category in {"champion", "top_scorer"} else 0.95,
+            target_ev_ratio=0.90 if category in {"champion", "top_scorer"} else 0.98,
+        )
         safe_ev = float(safe["expected_points"])
         strategic_ev = float(strategic["expected_points"])
         picks.append(
@@ -155,13 +164,23 @@ def build_award_picks(expected_points: pd.DataFrame) -> pd.DataFrame:
                 "category": category,
                 "category_points": float(safe["category_points"]),
                 "safe_pick": safe["candidate"],
+                "safe_pick_probability": float(safe["probability"]),
+                "safe_pick_expected_points": safe_ev,
                 "safe_probability": float(safe["probability"]),
                 "safe_expected_points": safe_ev,
                 "strategic_pick": strategic["candidate"],
+                "strategic_pick_probability": float(strategic["probability"]),
+                "strategic_pick_expected_points": strategic_ev,
+                "strategic_pick_ev_retained": 1.0 if safe_ev <= 0 else strategic_ev / safe_ev,
                 "strategic_probability": float(strategic["probability"]),
                 "strategic_expected_points": strategic_ev,
                 "strategic_ev_ratio": 1.0 if safe_ev <= 0 else strategic_ev / safe_ev,
                 "recommendation": "safe" if strategic["candidate"] == safe["candidate"] else "strategic alternative",
+                "field_differentiation_note": (
+                    "Pure-EV safe pick. No forced contrarian recommendation."
+                    if strategic["candidate"] == safe["candidate"]
+                    else "Advisory alternative only: meaningfully different while retaining the configured EV floor."
+                ),
             }
         )
     return pd.DataFrame(picks)

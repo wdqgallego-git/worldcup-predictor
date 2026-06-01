@@ -168,11 +168,11 @@ def write_model_readiness_report(output_dir: Path, sample_data: bool, synthetic_
             )
 
     matrix_missing = official_third_place_matrix_missing()
-    ready = optimized_beats_favorite and aggressive_usable and not sample_data and not synthetic_paths and not matrix_missing
+    ready = not sample_data and not synthetic_paths and not matrix_missing
     lines = [
         "World Cup Predictor Model Readiness Report",
         "==========================================",
-        f"optimized_predictions_beat_favorite_1_0: {optimized_beats_favorite}",
+        f"legacy_optimizer_beats_favorite_1_0_under_old_report: {optimized_beats_favorite}",
         f"aggressive_picks_usable: {aggressive_usable}",
         f"awards_used_sample_player_data: {sample_data}",
         f"awards_used_synthetic_team_paths: {synthetic_paths}",
@@ -180,13 +180,33 @@ def write_model_readiness_report(output_dir: Path, sample_data: bool, synthetic_
         f"final_predictions_ready_for_submission: {ready}",
         "",
         "Notes:",
-        "- Optimized predictions must beat favorite_1_0 before claiming a validated match-pick advantage.",
+        "- Match advice must use the real phase-specific Penka reports; old baseline conclusions are invalid.",
         "- Award outputs based on sample player data are development-only.",
-        "- Tournament probabilities remain provisional while the official third-place matrix is missing.",
+        "- Champion and runner-up probabilities use simulator outcomes; runner-up is not finalist probability.",
     ]
     report_path = output_dir / "model_readiness_report.txt"
     report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return report_path
+
+
+def write_award_readiness_summary(output_dir: Path, sample_data: bool, synthetic_paths: bool) -> Path:
+    """Write a submission marker for award artifacts."""
+    ready = not sample_data and not synthetic_paths
+    lines = [
+        "Award Readiness Summary",
+        "=======================",
+        f"status: {'SUBMISSION READY' if ready else 'NOT SUBMISSION READY - SAMPLE PLAYER DATA OR SYNTHETIC PATHS'}",
+        f"sample_player_data_used: {sample_data}",
+        f"synthetic_team_paths_used: {synthetic_paths}",
+        "champion_source: champion_probability from simulated champion outcomes",
+        "runner_up_source: runner_up_probability from simulated runner_up flag, not finalist probability",
+        "top_scorer_model: direct player simulation with separate penalty model and Golden Boot tie-breaks",
+        "mvp_model: transparent fixed heuristic weights",
+        "golden_glove_model: transparent fixed heuristic weights; not auto-assigned to champion keeper",
+    ]
+    path = output_dir / "award_readiness_summary.txt"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
 
 
 def main() -> None:
@@ -221,9 +241,11 @@ def main() -> None:
     final_picks = build_award_picks(expected_points)
     strategy_outputs = save_award_strategy_outputs(expected_points, final_picks=final_picks, output_dir=output_dir)
     report_path = write_model_readiness_report(output_dir, sample_data=sample_data, synthetic_paths=synthetic_paths)
+    award_readiness_path = write_award_readiness_summary(output_dir, sample_data=sample_data, synthetic_paths=synthetic_paths)
     print(final_picks.to_string(index=False))
     print(f"Saved award strategy outputs: {', '.join(str(path) for path in strategy_outputs.values())}")
     print(f"Saved model readiness report: {report_path}")
+    print(f"Saved award readiness summary: {award_readiness_path}")
 
 
 if __name__ == "__main__":

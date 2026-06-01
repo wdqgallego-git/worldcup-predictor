@@ -1,44 +1,42 @@
 # World Cup Predictor Readiness Report
 
-## 1. Current Status
+## Rules Now Implemented
+
+- Penka match scoring is phase-specific and mutually exclusive.
+- Knockout predictions score the 90-minute result only. Extra time and penalties do not count.
+- Knockout score recommendations allow draws.
+- Group recommendations are refreshable match by match because Penka accepts predictions until 1 minute before kickoff.
+- Special prediction points are Champion 25, Runner-up 15, Top Scorer 35, MVP 10, and Golden Glove 10.
+- Special predictions lock before the Penka starts.
+
+## Readiness Status
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Match pipeline | Working | Generates leakage-safe group-stage match predictions and Excel export. |
-| Backtesting | Working with caution | 2014, 2018, and 2022 walk-forward backtests run successfully. |
-| Tournament simulation | Working | Uses the official 495-scenario matrix, the 48-team 2026 format, and passes structural checks. |
-| Awards pipeline | Working for development | Reads real tournament-path simulations and generates award outputs. |
-| Player data | Blocked for final use | Current awards use sample player files rather than complete real squad data. |
-| Third-place matrix | Ready | Official FIFA World Cup 26 Annexe C matrix is populated and required in final mode. |
-| Aggressive picks | Working | Realism filter keeps alternatives nearby and retains at least 95% of safe expected value. |
-| Final submission readiness | Not ready | Match and tournament outputs are ready for review; award recommendations still need real player data. |
+| Group match predictions | Development ready, refresh before match | Use `penka_group_predictions.csv` as a baseline. Refresh rankings, lineups, injuries, suspensions, rotation, goalkeeper changes, and incentives before kickoff. |
+| Knockout predictions | Script ready, fixtures pending | Populate `data/manual/knockout_round_fixtures.csv` as each confirmed Penka round appears. Advice uses calibrated 90-minute probabilities and phase-specific EV. |
+| Awards | Not submission ready | Real player data is still missing. Sample-player outputs only prove that the pipeline runs. |
+| Ranking data | Refresh recommended | The bundled ranking source currently ends on `2024-09-19`; refresh rankings before submission and before each match where possible. |
+| Tournament simulator | Ready for structural use | Uses the official FIFA World Cup 26 third-place assignment matrix and the 48-team format. |
+| Knockout tie resolution | Simulator-only | Tournament paths resolve tied 90-minute knockout simulations stochastically. Penka match predictions remain 90-minute scores and may be draws. |
+| Player data validation | Blocked for final awards | Replace sample players, player stats, goalkeeper stats, penalty takers, injuries, and squad status with real files. |
 
-## 2. Blocking Issues
+## Warnings
 
-1. Real player data is missing. Award predictions are based on sample player files and are not valid for final submission.
-2. The calibrated close-match optimizer improves on the uncalibrated optimizer but does not beat the `favorite_1_0` baseline overall in historical backtesting.
+1. The old `favorite_1_0` conclusion was based on an incorrect scoring rule and is invalid until the real Penka backtest reports are reviewed.
+2. Old outputs generated under the previous scoring formula should not be submitted.
+3. Any award output based on sample player data is marked `NOT SUBMISSION READY - SAMPLE PLAYER DATA`.
+4. Pre-tournament group predictions are not final advice. Matchday 3 and confirmed lineup changes especially require a refresh.
 
-## 3. Current Trusted Outputs
+## Current Output Trust
 
-| Output | Trust Level | Notes |
-| --- | --- | --- |
-| `final_predictions.csv` | Provisional match-level output | Suitable for reviewing group-stage safe picks and realistic aggressive alternatives. |
-| `final_predictions.xlsx` | Provisional match-level output | Excel version of the match prediction report. |
-| `team_path_simulations.csv` | Structurally trusted | Uses 20,000 simulations, the 2026 format, and the official third-place assignment matrix. |
-| `champion_probabilities.csv` | Trusted tournament-model output | Generated with the official third-place assignment matrix. |
-| `runner_up_probabilities.csv` | Trusted tournament-model output | Uses actual runner-up outcomes and the official third-place assignment matrix. |
-| `top_scorer_probabilities.csv` | Sample-data test output only | Confirms that the award pipeline works end to end. |
-| `mvp_probabilities.csv` | Sample-data test output only | Confirms that the award pipeline works end to end. |
-| `golden_glove_probabilities.csv` | Sample-data test output only | Confirms that the award pipeline works end to end. |
-
-## 4. Current Untrusted Outputs
-
-- Award predictions and award expected-points recommendations are untrusted for final submission because they use sample player data.
-- Award outputs remain development-only until real player data replaces the sample files.
-
-## 5. Next Actions
-
-1. Keep `favorite_1_0` as the default match recommendation and review calibrated optimizer diagnostics.
-2. Replace sample player, player-stat, goalkeeper, penalty-taker, injury, and squad-status files with real data.
-3. Rerun `python scripts/run_awards_prediction.py`.
-4. Review the final award expected-points workbook before submission.
+| Output | Trust Level |
+| --- | --- |
+| `penka_group_predictions.csv` / `.xlsx` | Refreshable development recommendation |
+| `penka_scoring_strategy_comparison.csv` | Historical diagnostic under real Penka scoring |
+| `team_path_simulations.csv` | Structurally trusted tournament simulation |
+| `champion_probabilities.csv` | Tournament-model output |
+| `runner_up_probabilities.csv` | Actual runner-up flag output, not finalist probability |
+| `top_scorer_probabilities.csv` | Sample-data test output only |
+| `mvp_probabilities.csv` | Sample-data test output only |
+| `golden_glove_probabilities.csv` | Sample-data test output only |

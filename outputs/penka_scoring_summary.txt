@@ -1,0 +1,19 @@
+Real Penka Scoring Strategy Summary
+===================================
+Scoring is phase-specific and mutually exclusive. Knockout predictions are 90-minute scores and may be draws.
+
+best_overall_strategy: favorite_2_1
+best_group_stage_strategy: favorite_2_1
+best_knockout_sanity_check_strategy: calibrated_optimizer_with_close_match_fallback
+favorite_1_0_overall_average_penka_points: 2.119792
+calibrated_optimizer_overall_average_penka_points: 1.947917
+Under real Penka scoring, does favorite_1_0 still beat the optimizer? True
+Under real Penka group scoring, does favorite_1_0 still win group-stage predictions? False
+Does 2-0 become better in the broad high-mismatch bucket? False
+Does 2-1 become better in moderate-favorite/high-total-goals buckets? Review penka_strategy_by_bucket.csv; do not automate from sparse slices.
+Do draws become valuable in close/knockout buckets? knockout sanity-check winner is draw: False
+recommended_group_stage_strategy: favorite_2_1
+recommended_knockout_strategy: EV-maximize each confirmed fixture analytically with its Penka phase; historical knockout rows are diagnostic only.
+Should the old favorite_1_0 everywhere conclusion be discarded? Yes. It was derived under the wrong points formula.
+
+best_calibration_under_penka_backtest: isotonic

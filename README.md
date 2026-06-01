@@ -13,4 +13,18 @@ Core workflow:
 3. Predict scores with a simple Poisson-style model.
 4. Simulate the 2026 tournament format.
 5. Estimate award probabilities.
-6. Optimize picks for expected company-game points.
+6. Optimize picks for expected Colombia Tech Fest Penka points.
+
+Match recommendations use the real phase-specific, mutually exclusive Penka scoring rules. Knockout advice is for the 90-minute score only and allows draws. Build refreshable group-stage recommendations with:
+
+```powershell
+python scripts/build_penka_group_predictions.py
+```
+
+Populate `data/manual/match_adjustments.csv` with human-reviewed lineup or availability adjustments before kickoff. Once Penka publishes a confirmed knockout round, populate `data/manual/knockout_round_fixtures.csv` and run:
+
+```powershell
+python scripts/run_knockout_round.py
+```
+
+Pre-tournament group predictions are baselines for review, not final submission advice. Award outputs are also development-only until the sample player files are replaced with real squad data.

@@ -18,6 +18,7 @@ from model import (
 )
 from poisson import score_probability_matrix
 from prediction_optimizer import get_safe_prediction, points_for_prediction
+from penka_scoring import GROUP
 
 
 LINEAR_INTERCEPT_BOUNDS = (-0.50, 0.75)
@@ -128,8 +129,17 @@ def optimized_challenge_points(predictions: pd.DataFrame, max_goals: int = 6) ->
             match.expected_goals_b,
             max_goals=max_goals,
         )
-        safe = get_safe_prediction(probabilities, max_goals=max_goals)
-        points.append(points_for_prediction(safe["pred_a"], safe["pred_b"], int(match.goals_a), int(match.goals_b)))
+        phase = getattr(match, "penka_phase", GROUP)
+        safe = get_safe_prediction(probabilities, max_goals=max_goals, phase=phase)
+        points.append(
+            points_for_prediction(
+                safe["pred_a"],
+                safe["pred_b"],
+                int(match.goals_a),
+                int(match.goals_b),
+                phase=phase,
+            )
+        )
     return np.asarray(points, dtype=int)
 
 
@@ -200,9 +210,34 @@ def fit_pre_tournament_calibrator(
     return fit_and_select_calibrator(calibration_predictions, max_goals=max_goals)
 
 
+def fit_pre_tournament_calibration_challengers(
+    training_df: pd.DataFrame,
+    feature_cols: list[str],
+    selected_model_name: str,
+    reference_date: str,
+) -> dict[str, LambdaCalibrator]:
+    """Fit auditable uncalibrated, linear, and isotonic pre-tournament mappings."""
+    fit_rows, calibration_rows, _ = date_based_split(training_df, reference_date)
+    estimator = build_candidate_estimators()[selected_model_name]
+    model_pair = fit_goal_pair(estimator, fit_rows, feature_cols, reference_date)
+    expected_a, expected_b = predict_goal_pair(model_pair, calibration_rows, feature_cols)
+    calibration_predictions = calibration_rows.copy()
+    calibration_predictions["raw_expected_goals_a"] = expected_a
+    calibration_predictions["raw_expected_goals_b"] = expected_b
+    raw, actual = flatten_goal_pairs(calibration_predictions)
+    return {
+        "uncalibrated": LambdaCalibrator(),
+        "linear": fit_linear_calibrator(raw, actual),
+        "isotonic": fit_isotonic_calibrator(raw, actual),
+    }
+
+
 def add_historical_match_context(predictions: pd.DataFrame) -> pd.DataFrame:
     """Mark old-format World Cup group and knockout rows for calibration reporting."""
     contextual = predictions.sort_values(["backtest_year", "date"], kind="stable").copy()
+    if "penka_phase" in contextual.columns:
+        contextual["match_context"] = np.where(contextual["penka_phase"].eq(GROUP), "group", "knockout")
+        return contextual
     contextual["_tournament_match_number"] = contextual.groupby("backtest_year").cumcount() + 1
     contextual["match_context"] = np.where(contextual["_tournament_match_number"] <= 48, "group", "knockout")
     return contextual.drop(columns="_tournament_match_number")
@@ -283,4 +318,3 @@ def paired_bootstrap_report(
             }
         )
     return pd.DataFrame(rows).sort_values("mean_point_difference", ascending=False, kind="stable")
-

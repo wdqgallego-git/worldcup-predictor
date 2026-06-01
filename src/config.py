@@ -1,5 +1,7 @@
 """Project configuration and constants."""
 
+from contest_config import AWARD_POINTS
+
 TRAIN_START_DATE = "2000-01-01"
 PREDICTION_REFERENCE_DATE = "2026-06-01"
 
@@ -29,14 +31,6 @@ MODEL_PARAMS_SQUARED_HGB = {
     "max_leaf_nodes": 15,
     "l2_regularization": 0.1,
     "random_state": 42,
-}
-
-AWARD_POINTS = {
-    "champion": 25,
-    "runner_up": 15,
-    "top_scorer": 35,
-    "mvp": 10,
-    "golden_glove": 10,
 }
 
 DEVELOPMENT_MODE = True

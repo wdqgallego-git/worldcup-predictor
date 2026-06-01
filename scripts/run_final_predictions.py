@@ -30,6 +30,7 @@ from features import build_fixture_features, build_training_table
 from model import predict_expected_goals, train_goal_models
 from poisson import summarize_score_probs
 from prediction_optimizer import summarize_match_strategy
+from penka_scoring import GROUP
 from tournament_simulator import (
     run_monte_carlo_tournament,
     validate_2026_format,
@@ -138,7 +139,7 @@ def optimize_fixture_predictions(fixture_predictions: pd.DataFrame) -> pd.DataFr
             max_goals=MAX_GOALS_FINAL,
             method="independent",
         )
-        strategy = summarize_match_strategy(probabilities["score_probs"], max_goals=MAX_GOALS_FINAL)
+        strategy = summarize_match_strategy(probabilities["score_probs"], max_goals=MAX_GOALS_FINAL, phase=GROUP)
         safe = strategy["safe_prediction"]
         aggressive = strategy["aggressive_prediction"]
         most_likely_goals = np.unravel_index(
@@ -157,9 +158,17 @@ def optimize_fixture_predictions(fixture_predictions: pd.DataFrame) -> pd.DataFr
                 "safe_prediction": safe["prediction"],
                 "optimized_result": safe["result"],
                 "safe_expected_points": safe["expected_points"],
+                "expected_penka_points": safe["expected_points"],
+                "exact_score_probability": safe["exact_score_probability"],
+                "correct_goal_difference_or_draw_probability": safe["correct_goal_difference_or_draw_probability"],
+                "correct_winner_probability": safe["correct_winner_probability"],
+                "wrong_probability": safe["wrong_probability"],
+                "selected_by": safe["selected_by"],
+                "tiebreak_changed_selection": safe["tiebreak_changed_selection"],
                 "aggressive_prediction": aggressive["prediction"],
                 "aggressive_expected_points": aggressive["expected_points"],
                 "aggressive_ev_ratio": aggressive["ev_ratio"],
+                "refresh_required_before_match": True,
             }
         )
     return fixture_predictions.merge(pd.DataFrame(rows), on="match_id", how="left", validate="one_to_one")
@@ -192,9 +201,17 @@ def select_final_prediction_columns(predictions: pd.DataFrame) -> pd.DataFrame:
         "safe_prediction",
         "optimized_result",
         "safe_expected_points",
+        "expected_penka_points",
+        "exact_score_probability",
+        "correct_goal_difference_or_draw_probability",
+        "correct_winner_probability",
+        "wrong_probability",
+        "selected_by",
+        "tiebreak_changed_selection",
         "aggressive_prediction",
         "aggressive_expected_points",
         "aggressive_ev_ratio",
+        "refresh_required_before_match",
     ]
     return predictions[columns].copy()
 
@@ -208,31 +225,23 @@ def save_match_predictions(predictions: pd.DataFrame, output_dir: Path) -> None:
 
 
 def build_final_recommendations(predictions: pd.DataFrame, output_dir: Path) -> pd.DataFrame:
-    """Keep favorite_1_0 as the default unless calibrated backtests justify a switch."""
+    """Write refreshable group recommendations from real Penka expected value."""
     favorite = add_baseline_predictions(predictions, "favorite_1_0", max_goals=MAX_GOALS_FINAL)
-    comparison_path = output_dir / "backtest_baseline_overall.csv"
-    recommended_strategy = "favorite_1_0"
-    reason = "favorite_1_0 remains the historical default until a calibrated strategy beats it overall."
-    if comparison_path.exists():
-        comparison = pd.read_csv(comparison_path)
-        averages = comparison.set_index("baseline")["avg_challenge_points"].to_dict()
-        calibrated_name = "calibrated_optimizer_with_favorite_1_0_close_match_fallback"
-        if averages.get(calibrated_name, -np.inf) > averages.get("favorite_1_0", np.inf):
-            recommended_strategy = calibrated_name
-            reason = "Calibrated strategy beat favorite_1_0 overall in historical backtests."
+    recommended_strategy = "penka_group_expected_value_refreshable"
+    reason = (
+        "Real group-phase Penka EV with exact-score tie-breaking. Refresh close to kickoff; "
+        "the earlier favorite_1_0 conclusion used an invalid points formula."
+    )
     recommendations = predictions[
-        ["match_id", "team_a", "team_b", "rank_a", "rank_b", "safe_prediction", "safe_expected_points"]
+        ["match_id", "team_a", "team_b", "rank_a", "rank_b", "safe_prediction", "expected_penka_points", "selected_by"]
     ].copy()
     recommendations["favorite_1_0_prediction"] = [
         f"{int(pred_a)}-{int(pred_b)}" for pred_a, pred_b in zip(favorite["pred_a"], favorite["pred_b"])
     ]
     recommendations["recommended_strategy"] = recommended_strategy
-    recommendations["recommended_prediction"] = np.where(
-        recommendations["recommended_strategy"].eq("favorite_1_0"),
-        recommendations["favorite_1_0_prediction"],
-        recommendations["safe_prediction"],
-    )
+    recommendations["recommended_prediction"] = recommendations["safe_prediction"]
     recommendations["recommendation_reason"] = reason
+    recommendations["refresh_required_before_match"] = True
     recommendations.to_csv(output_dir / "final_match_recommendations.csv", index=False)
     with pd.ExcelWriter(output_dir / "final_match_recommendations.xlsx", engine="openpyxl") as writer:
         recommendations.to_excel(writer, sheet_name="recommendations", index=False)

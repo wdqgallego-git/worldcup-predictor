@@ -12,7 +12,8 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from awards_model import simulate_awards
+from awards_model import score_golden_glove_candidates, simulate_awards
+from contest_config import AWARD_POINTS
 from data_loader import (
     load_company_scoring_rules,
     load_fixtures,
@@ -32,6 +33,7 @@ from player_data import (
 )
 from poisson import score_probability_matrix
 from prediction_optimizer import summarize_match_strategy
+from penka_scoring import GROUP, QUARTER_FINAL, ROUND_OF_32, score_prediction, validate_penka_scoring_examples
 from tournament_simulator import (
     assign_third_placed_teams_to_bracket,
     run_tournament_simulation,
@@ -53,6 +55,45 @@ def validate_scoring_rules() -> None:
     missing_awards = required_awards - found_awards
     if missing_awards:
         raise AssertionError(f"Missing scoring rules: {sorted(missing_awards)}")
+    loaded = {row["category"]: int(row["points"]) for row in scoring}
+    if loaded != AWARD_POINTS:
+        raise AssertionError(f"Award points do not match confirmed Penka values: {loaded}")
+
+
+def validate_penka_match_scoring() -> None:
+    """Prove phase scoring, draw handling, and optimizer recommendation caps."""
+    validate_penka_scoring_examples()
+    if score_prediction(1, 1, 0, 0, GROUP) != 3:
+        raise AssertionError("Non-exact group draw must score goal-difference/draw points.")
+    if score_prediction(1, 0, 2, 0, ROUND_OF_32) != 3:
+        raise AssertionError("Round-of-32 correct-winner points are incorrect.")
+    if score_prediction(1, 0, 2, 0, QUARTER_FINAL) != 5:
+        raise AssertionError("Quarter-final correct-winner points are incorrect.")
+    knockout = summarize_match_strategy(score_probability_matrix(0.30, 0.30, max_goals=5), phase=ROUND_OF_32)
+    if knockout["safe_prediction"]["result"] != "draw":
+        raise AssertionError("Knockout optimizer must allow a 90-minute draw prediction.")
+    for candidate in knockout["top_candidates"]:
+        if max(candidate["pred_a"], candidate["pred_b"]) > 4 or candidate["pred_a"] + candidate["pred_b"] > 5:
+            raise AssertionError("Optimizer emitted an absurd ordinary recommendation.")
+
+
+def validate_non_champion_golden_glove_path() -> None:
+    """Prove the Golden Glove heuristic can select a non-champion keeper."""
+    team_paths = pd.DataFrame(
+        [
+            {"simulation_id": 1, "team": "Champion", "matches_played": 8, "clean_sheets": 0, "finish_rank": 1},
+            {"simulation_id": 1, "team": "Runner-up", "matches_played": 8, "clean_sheets": 8, "finish_rank": 2},
+        ]
+    )
+    keepers = pd.DataFrame(
+        [
+            {"goalkeeper": "Champion Keeper", "team": "Champion", "minutes": 720, "saves": 0, "goals_conceded": 8, "clean_sheets": 0, "save_percentage": 0.0, "goals_prevented": -5.0, "reputation_prior": 0.0},
+            {"goalkeeper": "Runner-up Keeper", "team": "Runner-up", "minutes": 720, "saves": 20, "goals_conceded": 0, "clean_sheets": 8, "save_percentage": 1.0, "goals_prevented": 5.0, "reputation_prior": 1.0},
+        ]
+    )
+    winner = score_golden_glove_candidates(team_paths, keepers).iloc[0]
+    if winner["team"] != "Runner-up":
+        raise AssertionError("Golden Glove heuristic incorrectly auto-selected the champion keeper.")
 
 
 def validate_official_matrix_contract() -> pd.DataFrame:
@@ -80,6 +121,8 @@ def validate_official_matrix_contract() -> pd.DataFrame:
 def main() -> None:
     validate_2026_format()
     validate_scoring_rules()
+    validate_penka_match_scoring()
+    validate_non_champion_golden_glove_path()
     third_place_matrix = validate_official_matrix_contract()
 
     results = load_results()
@@ -97,7 +140,7 @@ def main() -> None:
         first_group_match["expected_goals_a"],
         first_group_match["expected_goals_b"],
     )
-    strategy = summarize_match_strategy(score_probs)
+    strategy = summarize_match_strategy(score_probs, phase=GROUP)
     if strategy["safe_prediction"]["expected_points"] <= 0:
         raise AssertionError("Match optimizer returned a non-positive expected-points prediction.")
 
