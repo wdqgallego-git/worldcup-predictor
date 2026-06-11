@@ -16,7 +16,13 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from config import MAX_GOALS_FINAL, N_SIMULATIONS_FINAL
+from config import (
+    MARKET_BLEND_ENABLED,
+    MARKET_BLEND_WEIGHT,
+    MAX_GOALS_FINAL,
+    N_SIMULATIONS_FINAL,
+    SCORE_PMF_METHOD,
+)
 from calibration import (
     add_raw_lambda_columns,
     apply_lambda_calibration,
@@ -27,8 +33,11 @@ from data_loader import load_fixtures, load_rankings, load_results
 from download_data import download_all
 from evaluation import add_baseline_predictions
 from features import build_fixture_features, build_training_table
+from market_blend import MARKET_PREDICTION_COLUMNS, apply_market_prior, load_market_consensus
 from model import predict_expected_goals, train_goal_models
-from poisson import summarize_score_probs
+from odds_priors import load_market_blend_gate
+from pick_sheet import build_pick_sheet, write_pick_sheet
+from poisson import SUPPORTED_METHODS, summarize_score_probs
 from prediction_optimizer import summarize_match_strategy
 from penka_scoring import GROUP
 from tournament_simulator import (
@@ -67,6 +76,23 @@ def parse_args() -> argparse.Namespace:
         "--allow-development-fallback",
         action="store_true",
         help="Allow deterministic third-place fallback for development only. Never use for a final submission.",
+    )
+    parser.add_argument(
+        "--score-method",
+        default=SCORE_PMF_METHOD,
+        choices=sorted(SUPPORTED_METHODS),
+        help=f"Score-probability backend for the pick optimizer. Defaults to {SCORE_PMF_METHOD!r}.",
+    )
+    parser.add_argument(
+        "--market-blend-weight",
+        type=float,
+        default=MARKET_BLEND_WEIGHT,
+        help=f"Weight on market-implied lambdas in the candidate blend. Defaults to {MARKET_BLEND_WEIGHT}.",
+    )
+    parser.add_argument(
+        "--no-market-blend",
+        action="store_true",
+        help="Skip the market-odds candidate blend entirely.",
     )
     return parser.parse_args()
 
@@ -129,7 +155,7 @@ def load_knockout_lambda_multiplier(output_dir: Path) -> float:
     return estimate_knockout_context_multiplier(backtests)
 
 
-def optimize_fixture_predictions(fixture_predictions: pd.DataFrame) -> pd.DataFrame:
+def optimize_fixture_predictions(fixture_predictions: pd.DataFrame, method: str = SCORE_PMF_METHOD) -> pd.DataFrame:
     """Add W/D/L probabilities and expected-points optimized score picks."""
     rows = []
     for fixture in fixture_predictions.itertuples(index=False):
@@ -137,7 +163,7 @@ def optimize_fixture_predictions(fixture_predictions: pd.DataFrame) -> pd.DataFr
             fixture.expected_goals_a,
             fixture.expected_goals_b,
             max_goals=MAX_GOALS_FINAL,
-            method="independent",
+            method=method,
         )
         strategy = summarize_match_strategy(probabilities["score_probs"], max_goals=MAX_GOALS_FINAL, phase=GROUP)
         safe = strategy["safe_prediction"]
@@ -213,6 +239,7 @@ def select_final_prediction_columns(predictions: pd.DataFrame) -> pd.DataFrame:
         "aggressive_ev_ratio",
         "refresh_required_before_match",
     ]
+    columns += [column for column in MARKET_PREDICTION_COLUMNS if column in predictions.columns]
     return predictions[columns].copy()
 
 
@@ -224,8 +251,17 @@ def save_match_predictions(predictions: pd.DataFrame, output_dir: Path) -> None:
         predictions.to_excel(writer, sheet_name="match_predictions", index=False)
 
 
-def build_final_recommendations(predictions: pd.DataFrame, output_dir: Path) -> pd.DataFrame:
-    """Write refreshable group recommendations from real Penka expected value."""
+def build_final_recommendations(
+    predictions: pd.DataFrame,
+    output_dir: Path,
+    gate: dict[str, object] | None = None,
+) -> pd.DataFrame:
+    """Write refreshable group recommendations from real Penka expected value.
+
+    Market-blended picks are written as candidate columns; they only replace the
+    validated recommendation when the backtest promotion gate has passed.
+    """
+    gate = gate or {"promote": False}
     favorite = add_baseline_predictions(predictions, "favorite_1_0", max_goals=MAX_GOALS_FINAL)
     recommended_strategy = "penka_group_expected_value_refreshable"
     reason = (
@@ -238,9 +274,22 @@ def build_final_recommendations(predictions: pd.DataFrame, output_dir: Path) -> 
     recommendations["favorite_1_0_prediction"] = [
         f"{int(pred_a)}-{int(pred_b)}" for pred_a, pred_b in zip(favorite["pred_a"], favorite["pred_b"])
     ]
-    recommendations["recommended_strategy"] = recommended_strategy
-    recommendations["recommended_prediction"] = recommendations["safe_prediction"]
-    recommendations["recommendation_reason"] = reason
+    has_market_odds = predictions.get("has_market_odds", pd.Series(False, index=predictions.index)).astype(bool)
+    promoted = bool(gate.get("promote")) & has_market_odds
+    recommendations["market_blended_prediction"] = predictions.get("market_blended_prediction", np.nan)
+    recommendations["has_market_odds"] = has_market_odds.to_numpy()
+    recommendations["market_blend_promoted"] = promoted.to_numpy()
+    recommendations["recommended_strategy"] = np.where(
+        promoted, "market_blended_prior_promoted_by_backtest_gate", recommended_strategy
+    )
+    recommendations["recommended_prediction"] = np.where(
+        promoted, recommendations["market_blended_prediction"], recommendations["safe_prediction"]
+    )
+    recommendations["recommendation_reason"] = np.where(
+        promoted,
+        "Market-blended pick: the blend beat favorite_2_1 and favorite_1_0 in the gated backtest.",
+        reason,
+    )
     recommendations["refresh_required_before_match"] = True
     recommendations.to_csv(output_dir / "final_match_recommendations.csv", index=False)
     with pd.ExcelWriter(output_dir / "final_match_recommendations.xlsx", engine="openpyxl") as writer:
@@ -284,10 +333,33 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     fixture_predictions = add_raw_lambda_columns(predict_expected_goals(models, fixture_features))
     fixture_predictions = apply_lambda_calibration(fixture_predictions, calibrator)
-    optimized_predictions = optimize_fixture_predictions(fixture_predictions)
+    optimized_predictions = optimize_fixture_predictions(fixture_predictions, method=args.score_method)
+    market_blend_enabled = MARKET_BLEND_ENABLED and not args.no_market_blend
+    market_consensus = (
+        load_market_consensus(method=args.score_method) if market_blend_enabled else pd.DataFrame()
+    )
+    optimized_predictions = apply_market_prior(
+        optimized_predictions,
+        market_consensus,
+        market_weight=args.market_blend_weight,
+        max_goals=MAX_GOALS_FINAL,
+        method=args.score_method,
+    )
+    gate = load_market_blend_gate()
+    matched_odds = int(optimized_predictions["has_market_odds"].sum())
+    print(
+        f"Market blend: {'enabled' if market_blend_enabled else 'disabled'};"
+        f" odds entered for {matched_odds} of {len(optimized_predictions)} fixtures;"
+        f" promotion gate passed: {bool(gate.get('promote'))}."
+    )
+    if not gate.get("promote"):
+        for gate_reason in gate.get("reasons_not_promoted", []):
+            print(f"  gate: {gate_reason}")
     final_predictions = select_final_prediction_columns(optimized_predictions)
     save_match_predictions(final_predictions, output_dir)
-    recommendations = build_final_recommendations(optimized_predictions, output_dir)
+    recommendations = build_final_recommendations(optimized_predictions, output_dir, gate=gate)
+    pick_sheet_path = write_pick_sheet(build_pick_sheet(optimized_predictions, gate), output_dir)
+    print(f"Saved pick sheet with odds provenance badges to {pick_sheet_path}")
     print(f"Saved {len(final_predictions)} optimized group-stage match predictions.")
     print(f"Recommended match strategy: {recommendations['recommended_strategy'].iloc[0]}")
     print(f"Running {args.simulations:,} World Cup 2026 tournament simulations...")

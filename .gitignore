@@ -20,3 +20,9 @@ outputs/*
 # Local data exports
 data/processed/*
 !data/processed/.gitkeep
+
+# Manual odds-entry working sheets
+data/odds_entry/
+
+# Pytest local temp dir
+.pytest_tmp/

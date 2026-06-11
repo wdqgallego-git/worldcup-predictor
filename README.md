@@ -28,3 +28,40 @@ python scripts/run_knockout_round.py
 ```
 
 Pre-tournament group predictions are baselines for review, not final submission advice. Award outputs are also development-only until the sample player files are replaced with real squad data.
+
+## Market-odds workflow (manual entry, gated candidate strategy)
+
+Betting-market odds are an optional prior. Blended picks are always produced as a
+**candidate** comparison; they only replace the validated baseline picks when the
+backtest promotion gate (`outputs/market_blend_gate.json`) says they beat
+`favorite_2_1` and `favorite_1_0` on historical odds. Matches with blank odds fall
+back to the model-only pick and are badged "no odds" in `outputs/pick_sheet.csv`.
+
+Weekly batch:
+
+```powershell
+python scripts/generate_odds_sheet.py --from 2026-06-11 --days 7 --bookmakers "Bet365,Pinnacle"
+# fill the sheet by hand, paste rows into data/raw/match_odds.csv, then:
+python scripts/run_final_predictions.py
+```
+
+Per-match update ~2 hours before kickoff (overwrite that match's odds row first):
+
+```powershell
+python scripts/reoptimize_match.py --match 37
+```
+
+The script stamps `source_timestamp = now()` and computes hours-before-kickoff
+itself, so freshness provenance is honest by construction.
+
+Historical odds for the gate (requires `BALLDONTLIE_API_KEY` in the environment or
+the git-ignored root `.env` — never commit keys):
+
+```powershell
+python scripts/fetch_odds_historical.py
+python scripts/run_backtest.py
+```
+
+Config knobs (environment variables or `.env`): `MARKET_BLEND_ENABLED`,
+`MARKET_BLEND_WEIGHT` (default 0.5), `SCORE_PMF_METHOD` (`independent` or
+`dixon_coles`), `DEVELOPMENT_MODE`.

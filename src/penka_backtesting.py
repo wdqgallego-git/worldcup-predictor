@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from config import HISTORICAL_MATCH_ODDS_PATH, MARKET_BLEND_WEIGHT
 from evaluation import add_baseline_predictions, most_likely_poisson_score
+from odds_priors import (
+    add_market_lambdas_to_consensus,
+    attach_market_consensus,
+    blend_market_lambdas,
+    build_match_odds_consensus,
+    load_match_odds,
+)
 from penka_scoring import GROUP, UNKNOWN_PHASE, prediction_category, score_prediction
 from poisson import score_probability_matrix, summarize_score_probs
 from prediction_optimizer import expected_points_for_prediction, get_result, get_safe_prediction
@@ -16,6 +26,9 @@ from prediction_optimizer import expected_points_for_prediction, get_result, get
 COMMON_SCORES = ((0, 0), (1, 0), (0, 1), (1, 1), (2, 0), (0, 2), (2, 1), (1, 2))
 FIXED_BASELINES = ("favorite_1_0", "favorite_2_0", "favorite_2_1", "favorite_3_0", "draw_0_0", "draw_1_1")
 DEFAULT_BOOTSTRAP_SAMPLES = 3000
+MARKET_BLENDED_STRATEGY = "market_blended_optimizer"
+MARKET_GATE_MINIMUM_MATCHED_MATCHES = 30
+MARKET_GATE_MINIMUM_YEAR_MATCHES = 10
 
 
 def _score_strings(predictions: pd.DataFrame) -> pd.Series:
@@ -52,6 +65,57 @@ def _most_likely_predictions(rows: pd.DataFrame, max_goals: int = 6) -> pd.DataF
         ],
         index=predictions.index,
     )
+    return predictions
+
+
+def load_historical_odds_consensus(path: str | Path = HISTORICAL_MATCH_ODDS_PATH) -> pd.DataFrame:
+    """Load pre-kickoff historical odds and derive market lambdas, or return empty."""
+    odds = load_match_odds(path)
+    if odds.empty:
+        return pd.DataFrame()
+    snapshot_hours = odds.get("hours_before_kickoff")
+    if snapshot_hours is not None and snapshot_hours.notna().any() and (snapshot_hours.dropna() < 0).any():
+        raise ValueError("Historical odds contain post-kickoff snapshots; the backtest requires pre-kickoff lines only.")
+    return add_market_lambdas_to_consensus(build_match_odds_consensus(odds))
+
+
+def _market_blended_predictions(
+    rows: pd.DataFrame,
+    odds_consensus: pd.DataFrame | None,
+    market_weight: float,
+    max_goals: int = 6,
+) -> pd.DataFrame:
+    """Blend market lambdas into calibrated lambdas where odds exist; model-only otherwise."""
+    predictions = _poisson_optimizer_predictions(
+        rows,
+        "calibrated_expected_goals_a",
+        "calibrated_expected_goals_b",
+        max_goals=max_goals,
+    )
+    predictions["market_odds_matched"] = False
+    if odds_consensus is None or odds_consensus.empty:
+        return predictions
+    keyed = rows[
+        ["date", "team_a", "team_b", "calibrated_expected_goals_a", "calibrated_expected_goals_b", "penka_phase"]
+    ].copy()
+    keyed["context_index"] = rows.index
+    matched = attach_market_consensus(keyed, odds_consensus)
+    if matched.empty:
+        return predictions
+    for row in matched.itertuples(index=False):
+        if not np.isfinite(row.market_lambda_a) or not np.isfinite(row.market_lambda_b):
+            continue
+        lambda_a, lambda_b = blend_market_lambdas(
+            float(row.calibrated_expected_goals_a),
+            float(row.calibrated_expected_goals_b),
+            float(row.market_lambda_a),
+            float(row.market_lambda_b),
+            market_weight,
+        )
+        probabilities = score_probability_matrix(lambda_a, lambda_b, max_goals=max_goals)
+        safe = get_safe_prediction(probabilities, max_goals=max_goals, phase=row.penka_phase)
+        predictions.loc[row.context_index, ["pred_a", "pred_b"]] = (safe["pred_a"], safe["pred_b"])
+        predictions.loc[row.context_index, "market_odds_matched"] = True
     return predictions
 
 
@@ -97,7 +161,12 @@ def _score_strategy(rows: pd.DataFrame, strategy: str, predicted: pd.DataFrame) 
     return scored
 
 
-def build_strategy_points(backtests: pd.DataFrame, max_goals: int = 6) -> tuple[pd.DataFrame, pd.DataFrame]:
+def build_strategy_points(
+    backtests: pd.DataFrame,
+    max_goals: int = 6,
+    odds_consensus: pd.DataFrame | None = None,
+    market_blend_weight: float = MARKET_BLEND_WEIGHT,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return match context and long per-strategy points under real Penka scoring."""
     context = backtests.copy().reset_index(drop=True)
     if "penka_phase" not in context.columns:
@@ -147,6 +216,11 @@ def build_strategy_points(backtests: pd.DataFrame, max_goals: int = 6) -> tuple[
     )
     prediction_tables["rank_gap_fixed_score_rule"] = _rank_gap_rule_predictions(context)
     prediction_tables["previous_final_recommendation_rule"] = prediction_tables["favorite_1_0"].copy()
+    market_blended = _market_blended_predictions(
+        context, odds_consensus, market_blend_weight, max_goals=max_goals
+    )
+    prediction_tables[MARKET_BLENDED_STRATEGY] = market_blended
+    context["market_odds_matched"] = market_blended["market_odds_matched"]
     points = pd.concat(
         [_score_strategy(context, strategy, predictions) for strategy, predictions in prediction_tables.items()],
         ignore_index=True,
@@ -438,16 +512,161 @@ def write_penka_summary(reports: dict[str, pd.DataFrame], calibration: pd.DataFr
     return path
 
 
+def _gate_comparison_row(
+    scope: str,
+    blended: np.ndarray,
+    baseline: np.ndarray,
+    baseline_name: str,
+    matches: int,
+) -> dict[str, object]:
+    differences = blended - baseline
+    ci_lower, ci_upper = _paired_bootstrap_ci(differences)
+    return {
+        "scope": scope,
+        "baseline": baseline_name,
+        "matches": matches,
+        "market_blended_average_penka_points": float(blended.mean()) if matches else np.nan,
+        "baseline_average_penka_points": float(baseline.mean()) if matches else np.nan,
+        "average_difference": float(differences.mean()) if matches else np.nan,
+        "ci_lower_95": ci_lower,
+        "ci_upper_95": ci_upper,
+    }
+
+
+def build_market_blend_gate_report(
+    context: pd.DataFrame,
+    points: pd.DataFrame,
+    market_blend_weight: float,
+) -> tuple[pd.DataFrame, dict[str, object]]:
+    """Evaluate the candidate-then-promote gate for the market-blended strategy.
+
+    The blend only earns default-submission status if, on the matched-odds subset,
+    it beats both favorite_2_1 and favorite_1_0 on average with a positive paired
+    bootstrap CI, and wins at least two backtest years against favorite_2_1.
+    """
+    pivot = points.pivot(index="match_index", columns="strategy", values="penka_points")
+    matched_mask = context.get("market_odds_matched", pd.Series(False, index=context.index)).astype(bool)
+    matched_indexes = context.index[matched_mask]
+    rows = []
+    for baseline_name in ("favorite_2_1", "favorite_1_0"):
+        rows.append(
+            _gate_comparison_row(
+                "all_backtest_matches",
+                pivot[MARKET_BLENDED_STRATEGY].to_numpy(dtype=float),
+                pivot[baseline_name].to_numpy(dtype=float),
+                baseline_name,
+                len(pivot),
+            )
+        )
+        rows.append(
+            _gate_comparison_row(
+                "matched_odds_only",
+                pivot.loc[matched_indexes, MARKET_BLENDED_STRATEGY].to_numpy(dtype=float),
+                pivot.loc[matched_indexes, baseline_name].to_numpy(dtype=float),
+                baseline_name,
+                len(matched_indexes),
+            )
+        )
+    years_won = []
+    years_evaluated = []
+    for year, year_rows in context.loc[matched_indexes].groupby("backtest_year"):
+        if len(year_rows) < MARKET_GATE_MINIMUM_YEAR_MATCHES:
+            continue
+        years_evaluated.append(int(year))
+        blended_total = pivot.loc[year_rows.index, MARKET_BLENDED_STRATEGY].sum()
+        baseline_total = pivot.loc[year_rows.index, "favorite_2_1"].sum()
+        if blended_total > baseline_total:
+            years_won.append(int(year))
+    report = pd.DataFrame(rows)
+    matched = report[report["scope"].eq("matched_odds_only")].set_index("baseline")
+    matched_count = int(matched_mask.sum())
+    reasons = []
+    if matched_count < MARKET_GATE_MINIMUM_MATCHED_MATCHES:
+        reasons.append(
+            f"only {matched_count} backtest matches have historical odds "
+            f"(minimum {MARKET_GATE_MINIMUM_MATCHED_MATCHES}); run scripts/fetch_odds_historical.py"
+        )
+    else:
+        for baseline_name in ("favorite_2_1", "favorite_1_0"):
+            if not matched.loc[baseline_name, "average_difference"] > 0:
+                reasons.append(f"does not beat {baseline_name} on average over matched-odds matches")
+            elif not matched.loc[baseline_name, "ci_lower_95"] > 0:
+                reasons.append(f"paired bootstrap 95% CI vs {baseline_name} includes zero")
+        if len(years_won) < 2:
+            reasons.append(
+                f"beats favorite_2_1 in only {len(years_won)} backtest year(s) "
+                f"({years_won or 'none'}); at least 2 required"
+            )
+    decision = {
+        "promote": not reasons,
+        "strategy": MARKET_BLENDED_STRATEGY,
+        "market_blend_weight": market_blend_weight,
+        "matched_odds_matches": matched_count,
+        "total_backtest_matches": int(len(context)),
+        "years_evaluated": years_evaluated,
+        "years_beating_favorite_2_1": years_won,
+        "reasons_not_promoted": reasons,
+        "evaluated_at_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    return report, decision
+
+
+def write_market_blend_gate(
+    report: pd.DataFrame,
+    decision: dict[str, object],
+    output_dir: Path,
+) -> None:
+    """Persist the gate comparison, machine-readable decision, and blunt summary."""
+    report.to_csv(output_dir / "market_blend_strategy_comparison.csv", index=False)
+    (output_dir / "market_blend_gate.json").write_text(
+        json.dumps(decision, indent=2) + "\n", encoding="utf-8"
+    )
+    matched = report[report["scope"].eq("matched_odds_only")].set_index("baseline")
+    lines = [
+        "Market Blend Promotion Gate",
+        "===========================",
+        f"strategy: {MARKET_BLENDED_STRATEGY} (market weight {decision['market_blend_weight']})",
+        f"matched_odds_matches: {decision['matched_odds_matches']} of {decision['total_backtest_matches']}",
+    ]
+    for baseline_name in ("favorite_2_1", "favorite_1_0"):
+        if baseline_name in matched.index and decision["matched_odds_matches"]:
+            row = matched.loc[baseline_name]
+            lines.append(
+                f"vs {baseline_name} (matched odds only): blended {row['market_blended_average_penka_points']:.4f}"
+                f" vs {row['baseline_average_penka_points']:.4f} per match,"
+                f" diff {row['average_difference']:+.4f},"
+                f" 95% CI [{row['ci_lower_95']:.4f}, {row['ci_upper_95']:.4f}]"
+            )
+    lines.append(f"years_beating_favorite_2_1: {decision['years_beating_favorite_2_1'] or 'none'}")
+    lines.append(f"promote_market_blend_to_default_picks: {decision['promote']}")
+    if decision["reasons_not_promoted"]:
+        lines.append("reasons:")
+        lines.extend(f"  - {reason}" for reason in decision["reasons_not_promoted"])
+    lines.append(
+        "Decision: market-blended picks replace the validated baseline."
+        if decision["promote"]
+        else "Decision: keep the validated baseline picks; market blend remains a candidate comparison."
+    )
+    (output_dir / "market_blend_gate_summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def run_penka_backtesting_reports(
     backtests: pd.DataFrame,
     output_dir: str | Path = "outputs",
     max_goals: int = 6,
+    market_blend_weight: float = MARKET_BLEND_WEIGHT,
 ) -> dict[str, pd.DataFrame]:
     """Generate authoritative Penka strategy and lambda-calibration reports."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     excluded = int(backtests.get("penka_phase", pd.Series(UNKNOWN_PHASE, index=backtests.index)).eq(UNKNOWN_PHASE).sum())
-    context, points = build_strategy_points(backtests, max_goals=max_goals)
+    odds_consensus = load_historical_odds_consensus()
+    context, points = build_strategy_points(
+        backtests,
+        max_goals=max_goals,
+        odds_consensus=odds_consensus,
+        market_blend_weight=market_blend_weight,
+    )
     reports = build_strategy_reports(context, points)
     for name, report in reports.items():
         report.to_csv(output_path / f"{name}.csv", index=False)
@@ -466,8 +685,11 @@ def run_penka_backtesting_reports(
     focused_group = build_focused_group_strategy_comparison(backtests)
     focused_group.to_csv(output_path / "penka_strategy_backtest_comparison.csv", index=False)
     write_focused_group_strategy_summary(focused_group, output_path)
+    gate_report, gate_decision = build_market_blend_gate_report(context, points, market_blend_weight)
+    write_market_blend_gate(gate_report, gate_decision, output_path)
     return {
         **reports,
         "penka_calibration_comparison": calibration,
         "penka_strategy_backtest_comparison": focused_group,
+        "market_blend_strategy_comparison": gate_report,
     }

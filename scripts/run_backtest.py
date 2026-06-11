@@ -30,6 +30,8 @@ from margin_analysis import run_margin_distribution_analysis
 from elo_analysis import run_elo_analysis
 from ml_policy_analysis import run_ml_policy_analysis
 from rule_b_analysis import run_rule_b_verification
+from score_pmf_backend_analysis import run_score_pmf_backend_analysis
+from score_pmf_backends import validate_score_pmf_backends
 
 
 AUDIT_CUTOFFS = {
@@ -73,6 +75,7 @@ def run_leakage_audit(results: pd.DataFrame, rankings: pd.DataFrame) -> None:
 def run_scoring_audit() -> None:
     """Verify mutually exclusive, phase-aware Penka scoring semantics."""
     validate_penka_scoring_examples()
+    validate_score_pmf_backends()
     assert_true(challenge_points(2, 1, 2, 1, GROUP) == 5, "Group exact score must be 5 points.")
     assert_true(challenge_points(3, 1, 2, 0, GROUP) == 3, "Group goal difference must be 3 points.")
     assert_true(challenge_points(1, 0, 2, 0, GROUP) == 2, "Group correct winner must be 2 points.")
@@ -176,6 +179,10 @@ def main() -> None:
     )
     assert_true((output_path / "penka_strategy_backtest_comparison.csv").exists(), "Missing focused Penka strategy CSV.")
     assert_true((output_path / "penka_strategy_summary.txt").exists(), "Missing focused Penka strategy summary.")
+    assert_true((output_path / "market_blend_gate.json").exists(), "Missing market blend gate decision.")
+    assert_true((output_path / "market_blend_gate_summary.txt").exists(), "Missing market blend gate summary.")
+    print("\nMARKET BLEND PROMOTION GATE")
+    print((output_path / "market_blend_gate_summary.txt").read_text(encoding="utf-8"))
     print(penka_outputs["penka_scoring_strategy_comparison"].to_string(index=False))
     print("\nFOCUSED PENKA GROUP STRATEGY REPLACEMENT TEST")
     print(penka_outputs["penka_strategy_backtest_comparison"].to_string(index=False))
@@ -183,6 +190,22 @@ def main() -> None:
     print((output_path / "penka_strategy_summary.txt").read_text(encoding="utf-8"))
     print("\nREAL PENKA STRATEGY DECISION")
     print((output_path / "penka_scoring_summary.txt").read_text(encoding="utf-8"))
+    print("\nSCORE PMF BACKEND DIAGNOSTIC")
+    pmf_outputs = run_score_pmf_backend_analysis(
+        pd.read_csv(output_path / "backtest_predictions.csv"),
+        results,
+        output_dir=output_path,
+    )
+    for file_name in (
+        "score_pmf_backend_comparison.csv",
+        "score_pmf_backend_by_year.csv",
+        "score_pmf_backend_by_bucket.csv",
+        "score_pmf_backend_summary.txt",
+    ):
+        assert_true((output_path / file_name).exists(), f"Missing PMF backend output: {file_name}")
+    print(pmf_outputs["score_pmf_backend_comparison"].to_string(index=False))
+    print("\nSCORE PMF BACKEND DECISION")
+    print((output_path / "score_pmf_backend_summary.txt").read_text(encoding="utf-8"))
     print("\nFULL-HISTORY WINNING-MARGIN ANALYSIS")
     margin_outputs = run_margin_distribution_analysis(results, rankings, output_dir=output_path)
     print(margin_outputs["sample_counts"].to_string(index=False))
