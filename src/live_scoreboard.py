@@ -154,25 +154,64 @@ def score_live_matches(
     return board, standings_table
 
 
+def build_upcoming_section(
+    board: pd.DataFrame,
+    pick_sheet: pd.DataFrame | None = None,
+    next_matches: int = 8,
+) -> list[str]:
+    """Submission lines for the next unplayed matches, with odds-freshness handling."""
+    upcoming = board[~board["played"]].sort_values(["date", "time", "match_id"], kind="stable").head(next_matches)
+    if upcoming.empty:
+        return ["All group matches have results entered."]
+    badges = {}
+    if pick_sheet is not None and "odds_provenance_badge" in pick_sheet.columns:
+        badges = pick_sheet.set_index("match_id")[["odds_provenance_badge", "odds_freshness"]].to_dict("index")
+    lines = ["NEXT SUBMISSIONS (recommended pick | aggressive alternative | odds freshness):"]
+    stale = []
+    for row in upcoming.itertuples(index=False):
+        badge_info = badges.get(row.match_id, {})
+        badge = badge_info.get("odds_provenance_badge", "no pick sheet — run scripts/run_final_predictions.py")
+        freshness = badge_info.get("odds_freshness", "none")
+        lines.append(
+            f"  {str(row.date)} match {row.match_id}: {row.team_a} vs {row.team_b}"
+            f" -> SUBMIT {row.recommended_prediction}"
+            f" (aggressive: {row.aggressive_prediction}) [{badge}]"
+        )
+        if freshness != "green":
+            stale.append(int(row.match_id))
+    if stale:
+        lines.append("")
+        lines.append("Freshness: the matches above without a green badge are running on stale or")
+        lines.append("missing odds. ~2 hours before each kickoff, update that match's odds row in")
+        lines.append("data/raw/match_odds.csv with the current closing line, then run:")
+        lines.extend(f"  python scripts/reoptimize_match.py --match {match_id}" for match_id in stale)
+        lines.append("(the script stamps source_timestamp=now() itself and refreshes only that pick)")
+    return lines
+
+
 def write_scoreboard(
     board: pd.DataFrame,
     standings: pd.DataFrame,
     output_dir: str | Path = "outputs",
+    pick_sheet: pd.DataFrame | None = None,
 ) -> Path:
-    """Write the per-match board, standings, and a blunt matchday-3 framing."""
+    """Write the per-match board, standings, next submissions, and matchday-3 framing."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     board.to_csv(output_path / "live_scoreboard.csv", index=False)
     standings.to_csv(output_path / "live_scoreboard_standings.csv", index=False)
     played = board[board["played"]]
     submitted = standings.set_index("strategy").loc["submitted"]
-    best = standings.iloc[0]
     lines = [
         "Live 2026 Group-Stage Scoreboard",
         "================================",
         f"matches_played: {len(played)} of {len(board)}",
         f"submitted_points: {int(submitted['points_so_far'])} "
         f"(avg {submitted['average_so_far']:.3f} per match)" if len(played) else "submitted_points: 0 (no results entered yet)",
+        "",
+    ]
+    lines += build_upcoming_section(board, pick_sheet)
+    lines += [
         "",
         "Standings (points so far | projected final using WC-backtest priors):",
     ]

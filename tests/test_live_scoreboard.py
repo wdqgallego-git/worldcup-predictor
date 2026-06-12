@@ -118,3 +118,28 @@ class TestScoring:
         assert (tmp_path / "live_scoreboard.csv").exists()
         text = summary.read_text(encoding="utf-8")
         assert "matches_played: 1 of 2" in text
+
+    def test_upcoming_section_shows_recommendation_and_refresh_hint(self, tmp_path, artifacts):
+        recommendations, final_predictions = artifacts
+        board, standings = score_live_matches(self.make_live(), recommendations, final_predictions)
+        pick_sheet = pd.DataFrame(
+            [
+                {"match_id": 2, "odds_provenance_badge": "fanduel · captured 30h pre-KO", "odds_freshness": "amber"},
+            ]
+        )
+        summary = write_scoreboard(board, standings, tmp_path, pick_sheet=pick_sheet)
+        text = summary.read_text(encoding="utf-8")
+        # the unplayed match surfaces with its submission line and stale-odds refresh command
+        assert "match 2: South Korea vs Czechia -> SUBMIT 1-0" in text
+        assert "aggressive: 2-1" in text
+        assert "captured 30h pre-KO" in text
+        assert "python scripts/reoptimize_match.py --match 2" in text
+
+    def test_upcoming_section_quiet_when_fresh(self, tmp_path, artifacts):
+        recommendations, final_predictions = artifacts
+        board, standings = score_live_matches(self.make_live(), recommendations, final_predictions)
+        pick_sheet = pd.DataFrame(
+            [{"match_id": 2, "odds_provenance_badge": "fanduel · 2h pre-KO", "odds_freshness": "green"}]
+        )
+        summary = write_scoreboard(board, standings, tmp_path, pick_sheet=pick_sheet)
+        assert "reoptimize_match" not in summary.read_text(encoding="utf-8")

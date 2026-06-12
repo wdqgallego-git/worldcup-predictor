@@ -47,7 +47,9 @@ def main() -> None:
     live_results = pd.read_csv(live_path, dtype={"goals_a": "object", "goals_b": "object", "submitted_prediction": "object"})
     live_results = live_results.reindex(columns=LIVE_RESULTS_COLUMNS)
     board, standings = score_live_matches(live_results, recommendations, final_predictions)
-    summary_path = write_scoreboard(board, standings, PROJECT_ROOT / "outputs")
+    pick_sheet_path = PROJECT_ROOT / "outputs" / "pick_sheet.csv"
+    pick_sheet = pd.read_csv(pick_sheet_path) if pick_sheet_path.exists() else None
+    summary_path = write_scoreboard(board, standings, PROJECT_ROOT / "outputs", pick_sheet=pick_sheet)
     print(summary_path.read_text(encoding="utf-8"))
 
 
