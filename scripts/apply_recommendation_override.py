@@ -22,7 +22,7 @@ if str(SRC_DIR) not in sys.path:
 
 from evaluation import orient_favorite_score
 
-STRATEGIES = ("favorite_2_1", "favorite_1_0", "model_ev")
+STRATEGIES = ("favorite_2_1", "favorite_1_0", "model_ev", "market_ev")
 REASONS = {
     "favorite_2_1": (
         "User-selected: rank-oriented 2-1. Best tested strategy on the World Cup scope "
@@ -31,6 +31,11 @@ REASONS = {
     ),
     "favorite_1_0": "User-selected: rank-oriented 1-0 (best on low-scoring Euro/Copa environments).",
     "model_ev": "Model EV pick restored (penka_group_expected_value_refreshable).",
+    "market_ev": (
+        "User-selected: per-match EV pick from market-blended probabilities (closing odds "
+        "+ model, Dixon-Coles). Most informed per-match scoreline; matches without odds "
+        "fall back to the model EV pick. Note: backtested below blanket favorite_2_1."
+    ),
 }
 
 
@@ -44,6 +49,8 @@ def parse_args() -> argparse.Namespace:
 def override_predictions(recommendations: pd.DataFrame, strategy: str) -> pd.Series:
     if strategy == "model_ev":
         return recommendations["safe_prediction"]
+    if strategy == "market_ev":
+        return recommendations["market_blended_prediction"].fillna(recommendations["safe_prediction"])
     goals = (2, 1) if strategy == "favorite_2_1" else (1, 0)
     return pd.Series(
         [
