@@ -181,6 +181,21 @@ def main() -> None:
     assert_true((output_path / "penka_strategy_summary.txt").exists(), "Missing focused Penka strategy summary.")
     assert_true((output_path / "market_blend_gate.json").exists(), "Missing market blend gate decision.")
     assert_true((output_path / "market_blend_gate_summary.txt").exists(), "Missing market blend gate summary.")
+    assert_true(
+        (output_path / "market_blend_backtest_by_year.csv").exists(),
+        "Missing scope-labeled market blend by-year report.",
+    )
+    assert_true(
+        (output_path / "market_blend_lambda_audit.csv").exists(),
+        "Missing matched-odds market lambda audit.",
+    )
+    for file_name in (
+        "market_strategy_matched_comparison.csv",
+        "market_strategy_by_year.csv",
+        "market_blend_weight_sensitivity.csv",
+        "definitive_market_strategy_summary.txt",
+    ):
+        assert_true((output_path / file_name).exists(), f"Missing definitive market strategy output: {file_name}")
     print("\nMARKET BLEND PROMOTION GATE")
     print((output_path / "market_blend_gate_summary.txt").read_text(encoding="utf-8"))
     print(penka_outputs["penka_scoring_strategy_comparison"].to_string(index=False))

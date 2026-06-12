@@ -465,12 +465,14 @@ def load_market_blend_gate(path: str | Path = "outputs/market_blend_gate.json") 
     if not gate_path.exists():
         return {
             "promote": False,
+            "promoted_strategy": None,
             "reasons_not_promoted": [
                 "market blend gate has not been evaluated; run scripts/run_backtest.py with historical odds"
             ],
         }
     decision = json.loads(gate_path.read_text(encoding="utf-8"))
     decision.setdefault("promote", False)
+    decision.setdefault("promoted_strategy", "market_blended_optimizer" if decision["promote"] else None)
     decision.setdefault("reasons_not_promoted", [])
     return decision
 

@@ -30,8 +30,54 @@ MARKET_PREDICTION_COLUMNS = [
     "market_lambda_a", "market_lambda_b",
     "blended_expected_goals_a", "blended_expected_goals_b",
     "market_blended_prediction", "market_blended_expected_points",
+    "market_favorite_2_1_prediction", "market_favorite_1_0_prediction",
 ]
+MARKET_FAVORITE_MIN_PROBABILITY_GAP = 0.03
+PROMOTED_MARKET_COLUMNS = {
+    "market_blended_optimizer": "market_blended_prediction",
+    "market_favorite_2_1": "market_favorite_2_1_prediction",
+    "market_favorite_1_0": "market_favorite_1_0_prediction",
+}
 _KICKOFF_TIME_PATTERN = re.compile(r"^\s*(\d{1,2}):(\d{2})\s*(?:UTC\s*([+-]\d{1,2}(?:\.\d+)?))?\s*$")
+
+
+def orient_market_fixed_score(
+    prob_team_a: float,
+    prob_team_b: float,
+    rank_a: float | None,
+    rank_b: float | None,
+    favorite_goals: int,
+    underdog_goals: int,
+    min_probability_gap: float = MARKET_FAVORITE_MIN_PROBABILITY_GAP,
+) -> str:
+    """Orient a fixed score using the market, with ranking fallback for near-ties."""
+    probabilities_available = np.isfinite(prob_team_a) and np.isfinite(prob_team_b)
+    decisive_market = probabilities_available and abs(float(prob_team_a) - float(prob_team_b)) >= min_probability_gap
+    if decisive_market:
+        team_a_favorite = float(prob_team_a) > float(prob_team_b)
+    elif rank_a is not None and rank_b is not None and np.isfinite(rank_a) and np.isfinite(rank_b):
+        team_a_favorite = float(rank_a) < float(rank_b)
+    elif probabilities_available:
+        team_a_favorite = float(prob_team_a) >= float(prob_team_b)
+    else:
+        team_a_favorite = True
+    return f"{favorite_goals}-{underdog_goals}" if team_a_favorite else f"{underdog_goals}-{favorite_goals}"
+
+
+def select_promoted_market_prediction(
+    predictions: pd.DataFrame,
+    gate: dict[str, object],
+) -> tuple[pd.Series, pd.Series, str | None]:
+    """Return the gated market-pick mask and selected candidate, failing closed."""
+    promoted_strategy = gate.get("promoted_strategy")
+    if promoted_strategy is None and bool(gate.get("promote")):
+        promoted_strategy = "market_blended_optimizer"
+    candidate_column = PROMOTED_MARKET_COLUMNS.get(str(promoted_strategy))
+    has_odds = predictions.get("has_market_odds", pd.Series(False, index=predictions.index)).astype(bool)
+    if not bool(gate.get("promote")) or candidate_column is None or candidate_column not in predictions:
+        return pd.Series(False, index=predictions.index), pd.Series(np.nan, index=predictions.index), None
+    selected = predictions[candidate_column]
+    return has_odds & selected.notna(), selected, str(promoted_strategy)
 
 
 def parse_kickoff_utc(date: object, time_label: object) -> pd.Timestamp:
@@ -70,7 +116,10 @@ def apply_market_prior(
 ) -> pd.DataFrame:
     """Add market-blended lambdas and candidate picks; matches without odds stay model-only."""
     predictions = fixture_predictions.copy()
-    text_columns = {"market_bookmakers", "market_odds_captured_at", "market_blended_prediction"}
+    text_columns = {
+        "market_bookmakers", "market_odds_captured_at", "market_blended_prediction",
+        "market_favorite_2_1_prediction", "market_favorite_1_0_prediction",
+    }
     predictions["has_market_odds"] = False
     for column in MARKET_PREDICTION_COLUMNS[1:]:
         predictions[column] = pd.Series(
@@ -78,7 +127,9 @@ def apply_market_prior(
         )
     if odds_consensus is None or odds_consensus.empty:
         return predictions
-    keyed = predictions[["date", "team_a", "team_b", lambda_a_column, lambda_b_column]].copy()
+    keyed_columns = ["date", "team_a", "team_b", lambda_a_column, lambda_b_column]
+    keyed_columns.extend(column for column in ("rank_a", "rank_b") if column in predictions.columns)
+    keyed = predictions[keyed_columns].copy()
     keyed["prediction_index"] = predictions.index
     matched = attach_market_consensus(keyed, odds_consensus)
     if matched.empty:
@@ -111,6 +162,14 @@ def apply_market_prior(
         predictions.loc[index, "blended_expected_goals_b"] = blended_b
         predictions.loc[index, "market_blended_prediction"] = safe["prediction"]
         predictions.loc[index, "market_blended_expected_points"] = safe["expected_points"]
+        rank_a = getattr(row, "rank_a", np.nan)
+        rank_b = getattr(row, "rank_b", np.nan)
+        predictions.loc[index, "market_favorite_2_1_prediction"] = orient_market_fixed_score(
+            row.prob_team_a, row.prob_team_b, rank_a, rank_b, 2, 1
+        )
+        predictions.loc[index, "market_favorite_1_0_prediction"] = orient_market_fixed_score(
+            row.prob_team_a, row.prob_team_b, rank_a, rank_b, 1, 0
+        )
     return predictions
 
 
@@ -187,8 +246,9 @@ def reoptimize_single_match(
     gate = load_market_blend_gate(gate_path)
     result = blended.iloc[0]
     has_odds = bool(result["has_market_odds"])
-    promoted = bool(gate.get("promote")) and has_odds
-    recommended = result["market_blended_prediction"] if promoted else fixture["safe_prediction"]
+    use_market, selected_market, promoted_strategy = select_promoted_market_prediction(blended, gate)
+    promoted = bool(use_market.iloc[0])
+    recommended = selected_market.iloc[0] if promoted else fixture["safe_prediction"]
     return {
         "match_id": fixture["match_id"],
         "team_a": fixture["team_a"],
@@ -197,6 +257,7 @@ def reoptimize_single_match(
         "odds_rows_stamped": int(len(stamped)),
         "has_market_odds": has_odds,
         "market_blend_promoted": promoted,
+        "promoted_strategy": promoted_strategy,
         "model_prediction": fixture["safe_prediction"],
         "market_blended_prediction": result["market_blended_prediction"] if has_odds else None,
         "recommended_prediction": recommended,

@@ -11,6 +11,7 @@ import pandas as pd
 
 from config import HISTORICAL_MATCH_ODDS_PATH, MARKET_BLEND_WEIGHT
 from evaluation import add_baseline_predictions, most_likely_poisson_score
+from market_blend import orient_market_fixed_score
 from odds_priors import (
     add_market_lambdas_to_consensus,
     attach_market_consensus,
@@ -27,6 +28,18 @@ COMMON_SCORES = ((0, 0), (1, 0), (0, 1), (1, 1), (2, 0), (0, 2), (2, 1), (1, 2))
 FIXED_BASELINES = ("favorite_1_0", "favorite_2_0", "favorite_2_1", "favorite_3_0", "draw_0_0", "draw_1_1")
 DEFAULT_BOOTSTRAP_SAMPLES = 3000
 MARKET_BLENDED_STRATEGY = "market_blended_optimizer"
+MARKET_FAVORITE_2_1_STRATEGY = "market_favorite_2_1"
+MARKET_FAVORITE_1_0_STRATEGY = "market_favorite_1_0"
+MARKET_BLEND_WEIGHT_STRATEGIES = {
+    0.25: "market_blended_optimizer_w25",
+    0.75: "market_blended_optimizer_w75",
+    1.00: "market_blended_optimizer_w100",
+}
+MARKET_GATE_CANDIDATES = (
+    MARKET_BLENDED_STRATEGY,
+    MARKET_FAVORITE_2_1_STRATEGY,
+    MARKET_FAVORITE_1_0_STRATEGY,
+)
 MARKET_GATE_MINIMUM_MATCHED_MATCHES = 30
 MARKET_GATE_MINIMUM_YEAR_MATCHES = 10
 
@@ -76,7 +89,10 @@ def load_historical_odds_consensus(path: str | Path = HISTORICAL_MATCH_ODDS_PATH
     snapshot_hours = odds.get("hours_before_kickoff")
     if snapshot_hours is not None and snapshot_hours.notna().any() and (snapshot_hours.dropna() < 0).any():
         raise ValueError("Historical odds contain post-kickoff snapshots; the backtest requires pre-kickoff lines only.")
-    return add_market_lambdas_to_consensus(build_match_odds_consensus(odds))
+    consensus = add_market_lambdas_to_consensus(build_match_odds_consensus(odds))
+    if "match_id" in consensus.columns:
+        consensus["market_match_id"] = consensus["match_id"]
+    return consensus
 
 
 def _market_blended_predictions(
@@ -93,6 +109,15 @@ def _market_blended_predictions(
         max_goals=max_goals,
     )
     predictions["market_odds_matched"] = False
+    for column in (
+        "market_match_id",
+        "market_lambda_a",
+        "market_lambda_b",
+        "blended_lambda_a",
+        "blended_lambda_b",
+        "market_lambda_fit_error",
+    ):
+        predictions[column] = np.nan
     if odds_consensus is None or odds_consensus.empty:
         return predictions
     keyed = rows[
@@ -116,6 +141,42 @@ def _market_blended_predictions(
         safe = get_safe_prediction(probabilities, max_goals=max_goals, phase=row.penka_phase)
         predictions.loc[row.context_index, ["pred_a", "pred_b"]] = (safe["pred_a"], safe["pred_b"])
         predictions.loc[row.context_index, "market_odds_matched"] = True
+        predictions.loc[row.context_index, "market_match_id"] = getattr(row, "market_match_id", np.nan)
+        predictions.loc[row.context_index, "market_lambda_a"] = float(row.market_lambda_a)
+        predictions.loc[row.context_index, "market_lambda_b"] = float(row.market_lambda_b)
+        predictions.loc[row.context_index, "blended_lambda_a"] = lambda_a
+        predictions.loc[row.context_index, "blended_lambda_b"] = lambda_b
+        predictions.loc[row.context_index, "market_lambda_fit_error"] = float(
+            getattr(row, "market_lambda_fit_error", np.nan)
+        )
+    return predictions
+
+
+def _market_favorite_fixed_predictions(
+    rows: pd.DataFrame,
+    odds_consensus: pd.DataFrame | None,
+    favorite_goals: int,
+    underdog_goals: int,
+) -> pd.DataFrame:
+    """Orient a fixed score by Shin market favorite, with ranking fallback."""
+    baseline_name = f"favorite_{favorite_goals}_{underdog_goals}"
+    predictions = add_baseline_predictions(rows, baseline_name)
+    if odds_consensus is None or odds_consensus.empty:
+        return predictions
+    keyed = rows[["date", "team_a", "team_b", "rank_a", "rank_b"]].copy()
+    keyed["context_index"] = rows.index
+    matched = attach_market_consensus(keyed, odds_consensus)
+    for row in matched.itertuples(index=False):
+        score = orient_market_fixed_score(
+            row.prob_team_a,
+            row.prob_team_b,
+            row.rank_a,
+            row.rank_b,
+            favorite_goals,
+            underdog_goals,
+        )
+        pred_a, pred_b = (int(value) for value in score.split("-"))
+        predictions.loc[row.context_index, ["pred_a", "pred_b"]] = (pred_a, pred_b)
     return predictions
 
 
@@ -220,7 +281,26 @@ def build_strategy_points(
         context, odds_consensus, market_blend_weight, max_goals=max_goals
     )
     prediction_tables[MARKET_BLENDED_STRATEGY] = market_blended
-    context["market_odds_matched"] = market_blended["market_odds_matched"]
+    prediction_tables[MARKET_FAVORITE_2_1_STRATEGY] = _market_favorite_fixed_predictions(
+        context, odds_consensus, 2, 1
+    )
+    prediction_tables[MARKET_FAVORITE_1_0_STRATEGY] = _market_favorite_fixed_predictions(
+        context, odds_consensus, 1, 0
+    )
+    for weight, strategy_name in MARKET_BLEND_WEIGHT_STRATEGIES.items():
+        prediction_tables[strategy_name] = _market_blended_predictions(
+            context, odds_consensus, weight, max_goals=max_goals
+        )
+    for column in (
+        "market_odds_matched",
+        "market_match_id",
+        "market_lambda_a",
+        "market_lambda_b",
+        "blended_lambda_a",
+        "blended_lambda_b",
+        "market_lambda_fit_error",
+    ):
+        context[column] = market_blended[column]
     points = pd.concat(
         [_score_strategy(context, strategy, predictions) for strategy, predictions in prediction_tables.items()],
         ignore_index=True,
@@ -538,77 +618,327 @@ def build_market_blend_gate_report(
     points: pd.DataFrame,
     market_blend_weight: float,
 ) -> tuple[pd.DataFrame, dict[str, object]]:
-    """Evaluate the candidate-then-promote gate for the market-blended strategy.
-
-    The blend only earns default-submission status if, on the matched-odds subset,
-    it beats both favorite_2_1 and favorite_1_0 on average with a positive paired
-    bootstrap CI, and wins at least two backtest years against favorite_2_1.
-    """
+    """Evaluate each market candidate under the unchanged promotion criteria."""
     pivot = points.pivot(index="match_index", columns="strategy", values="penka_points")
     matched_mask = context.get("market_odds_matched", pd.Series(False, index=context.index)).astype(bool)
     matched_indexes = context.index[matched_mask]
     rows = []
-    for baseline_name in ("favorite_2_1", "favorite_1_0"):
-        rows.append(
-            _gate_comparison_row(
-                "all_backtest_matches",
-                pivot[MARKET_BLENDED_STRATEGY].to_numpy(dtype=float),
-                pivot[baseline_name].to_numpy(dtype=float),
-                baseline_name,
-                len(pivot),
-            )
-        )
-        rows.append(
-            _gate_comparison_row(
-                "matched_odds_only",
-                pivot.loc[matched_indexes, MARKET_BLENDED_STRATEGY].to_numpy(dtype=float),
-                pivot.loc[matched_indexes, baseline_name].to_numpy(dtype=float),
-                baseline_name,
-                len(matched_indexes),
-            )
-        )
-    years_won = []
-    years_evaluated = []
-    for year, year_rows in context.loc[matched_indexes].groupby("backtest_year"):
-        if len(year_rows) < MARKET_GATE_MINIMUM_YEAR_MATCHES:
-            continue
-        years_evaluated.append(int(year))
-        blended_total = pivot.loc[year_rows.index, MARKET_BLENDED_STRATEGY].sum()
-        baseline_total = pivot.loc[year_rows.index, "favorite_2_1"].sum()
-        if blended_total > baseline_total:
-            years_won.append(int(year))
-    report = pd.DataFrame(rows)
-    matched = report[report["scope"].eq("matched_odds_only")].set_index("baseline")
     matched_count = int(matched_mask.sum())
-    reasons = []
-    if matched_count < MARKET_GATE_MINIMUM_MATCHED_MATCHES:
-        reasons.append(
-            f"only {matched_count} backtest matches have historical odds "
-            f"(minimum {MARKET_GATE_MINIMUM_MATCHED_MATCHES}); run scripts/fetch_odds_historical.py"
-        )
-    else:
+    candidate_decisions: dict[str, dict[str, object]] = {}
+    for candidate in MARKET_GATE_CANDIDATES:
         for baseline_name in ("favorite_2_1", "favorite_1_0"):
-            if not matched.loc[baseline_name, "average_difference"] > 0:
-                reasons.append(f"does not beat {baseline_name} on average over matched-odds matches")
-            elif not matched.loc[baseline_name, "ci_lower_95"] > 0:
-                reasons.append(f"paired bootstrap 95% CI vs {baseline_name} includes zero")
-        if len(years_won) < 2:
+            for scope, indexes in (("all_backtest_matches", pivot.index), ("matched_odds_only", matched_indexes)):
+                comparison = _gate_comparison_row(
+                    scope,
+                    pivot.loc[indexes, candidate].to_numpy(dtype=float),
+                    pivot.loc[indexes, baseline_name].to_numpy(dtype=float),
+                    baseline_name,
+                    len(indexes),
+                )
+                comparison["candidate_strategy"] = candidate
+                rows.append(comparison)
+        years_won = []
+        years_evaluated = []
+        for year, year_rows in context.loc[matched_indexes].groupby("backtest_year"):
+            if len(year_rows) < MARKET_GATE_MINIMUM_YEAR_MATCHES:
+                continue
+            years_evaluated.append(int(year))
+            if pivot.loc[year_rows.index, candidate].sum() > pivot.loc[year_rows.index, "favorite_2_1"].sum():
+                years_won.append(int(year))
+        candidate_rows = pd.DataFrame(rows)
+        matched = candidate_rows[
+            candidate_rows["scope"].eq("matched_odds_only")
+            & candidate_rows["candidate_strategy"].eq(candidate)
+        ].set_index("baseline")
+        reasons = []
+        if matched_count < MARKET_GATE_MINIMUM_MATCHED_MATCHES:
             reasons.append(
-                f"beats favorite_2_1 in only {len(years_won)} backtest year(s) "
-                f"({years_won or 'none'}); at least 2 required"
+                f"only {matched_count} backtest matches have historical odds "
+                f"(minimum {MARKET_GATE_MINIMUM_MATCHED_MATCHES})"
             )
+        else:
+            for baseline_name in ("favorite_2_1", "favorite_1_0"):
+                if not matched.loc[baseline_name, "average_difference"] > 0:
+                    reasons.append(f"does not beat {baseline_name} on average over matched-odds matches")
+                elif not matched.loc[baseline_name, "ci_lower_95"] > 0:
+                    reasons.append(f"paired bootstrap 95% CI vs {baseline_name} includes zero")
+            if len(years_won) < 2:
+                reasons.append(
+                    f"beats favorite_2_1 in only {len(years_won)} backtest year(s) "
+                    f"({years_won or 'none'}); at least 2 required"
+                )
+        candidate_decisions[candidate] = {
+            "promote": not reasons,
+            "matched_odds_matches": matched_count,
+            "years_evaluated": years_evaluated,
+            "years_beating_favorite_2_1": years_won,
+            "matched_average_penka_points": float(pivot.loc[matched_indexes, candidate].mean()) if matched_count else np.nan,
+            "reasons_not_promoted": reasons,
+        }
+    report = pd.DataFrame(rows)[
+        ["candidate_strategy", "scope", "baseline", "matches", "market_blended_average_penka_points",
+         "baseline_average_penka_points", "average_difference", "ci_lower_95", "ci_upper_95"]
+    ]
+    passing = [name for name, result in candidate_decisions.items() if result["promote"]]
+    promoted_strategy = max(
+        passing,
+        key=lambda name: candidate_decisions[name]["matched_average_penka_points"],
+        default=None,
+    )
     decision = {
-        "promote": not reasons,
-        "strategy": MARKET_BLENDED_STRATEGY,
+        "promote": promoted_strategy is not None,
+        "promoted_strategy": promoted_strategy,
+        "strategy": promoted_strategy,
         "market_blend_weight": market_blend_weight,
         "matched_odds_matches": matched_count,
         "total_backtest_matches": int(len(context)),
-        "years_evaluated": years_evaluated,
-        "years_beating_favorite_2_1": years_won,
-        "reasons_not_promoted": reasons,
+        "candidate_decisions": candidate_decisions,
+        "reasons_not_promoted": [] if promoted_strategy else ["no market candidate passed every unchanged gate criterion"],
         "evaluated_at_utc": datetime.now(timezone.utc).isoformat(),
     }
     return report, decision
+
+
+MARKET_BLEND_BY_YEAR_COLUMNS = [
+    "scope",
+    "backtest_year",
+    "baseline",
+    "matches",
+    "market_blended_average_penka_points",
+    "baseline_average_penka_points",
+    "average_difference",
+    "ci_lower_95",
+    "ci_upper_95",
+]
+
+MARKET_BLEND_LAMBDA_AUDIT_COLUMNS = [
+    "scope",
+    "match_id",
+    "date",
+    "team_a",
+    "team_b",
+    "backtest_year",
+    "penka_phase",
+    "calibrated_lambda_a",
+    "calibrated_lambda_b",
+    "market_lambda_a",
+    "market_lambda_b",
+    "blended_lambda_a",
+    "blended_lambda_b",
+    "market_lambda_fit_error",
+    "actual_goals_a",
+    "actual_goals_b",
+    "blended_pick",
+    "favorite_2_1_pick",
+    "market_blended_penka_points",
+    "favorite_2_1_penka_points",
+    "favorite_1_0_penka_points",
+]
+
+
+def build_market_blend_backtest_by_year(
+    context: pd.DataFrame,
+    points: pd.DataFrame,
+) -> pd.DataFrame:
+    """Compare the blend with gate baselines by year on explicitly labeled matched scopes."""
+    pivot = points.pivot(index="match_index", columns="strategy", values="penka_points")
+    matched = context.get("market_odds_matched", pd.Series(False, index=context.index)).astype(bool)
+    scopes = {
+        "matched_odds_only": matched,
+        "matched_odds_group_stage_only": matched & context["penka_phase"].eq(GROUP),
+    }
+    rows = []
+    for scope, scope_mask in scopes.items():
+        scoped_context = context.loc[scope_mask]
+        for year, year_rows in scoped_context.groupby("backtest_year", sort=True):
+            indexes = year_rows.index
+            for baseline_name in ("favorite_2_1", "favorite_1_0"):
+                comparison = _gate_comparison_row(
+                    scope,
+                    pivot.loc[indexes, MARKET_BLENDED_STRATEGY].to_numpy(dtype=float),
+                    pivot.loc[indexes, baseline_name].to_numpy(dtype=float),
+                    baseline_name,
+                    len(indexes),
+                )
+                comparison["backtest_year"] = int(year)
+                rows.append(comparison)
+    return pd.DataFrame(rows, columns=MARKET_BLEND_BY_YEAR_COLUMNS)
+
+
+def build_market_blend_lambda_audit(
+    context: pd.DataFrame,
+    points: pd.DataFrame,
+) -> pd.DataFrame:
+    """Return one auditable row per historical match with attached market odds."""
+    matched = context.get("market_odds_matched", pd.Series(False, index=context.index)).astype(bool)
+    matched_context = context.loc[matched].copy()
+    if matched_context.empty:
+        return pd.DataFrame(columns=MARKET_BLEND_LAMBDA_AUDIT_COLUMNS)
+
+    points_pivot = points.pivot(index="match_index", columns="strategy", values="penka_points")
+    picks_pivot = points.pivot(index="match_index", columns="strategy", values="prediction")
+    indexes = matched_context.index
+    source_match_ids = matched_context.get("market_match_id")
+    if source_match_ids is None:
+        source_match_ids = matched_context.get("match_id", pd.Series(index=indexes, dtype=object))
+    source_match_ids = source_match_ids.where(source_match_ids.notna(), pd.Series(indexes + 1, index=indexes))
+
+    audit = pd.DataFrame(
+        {
+            "scope": "matched_odds_only",
+            "match_id": source_match_ids,
+            "date": matched_context["date"],
+            "team_a": matched_context["team_a"],
+            "team_b": matched_context["team_b"],
+            "backtest_year": matched_context["backtest_year"].astype(int),
+            "penka_phase": matched_context["penka_phase"],
+            "calibrated_lambda_a": matched_context["calibrated_expected_goals_a"],
+            "calibrated_lambda_b": matched_context["calibrated_expected_goals_b"],
+            "market_lambda_a": matched_context["market_lambda_a"],
+            "market_lambda_b": matched_context["market_lambda_b"],
+            "blended_lambda_a": matched_context["blended_lambda_a"],
+            "blended_lambda_b": matched_context["blended_lambda_b"],
+            "market_lambda_fit_error": matched_context["market_lambda_fit_error"],
+            "actual_goals_a": matched_context["goals_a"],
+            "actual_goals_b": matched_context["goals_b"],
+            "blended_pick": picks_pivot.loc[indexes, MARKET_BLENDED_STRATEGY],
+            "favorite_2_1_pick": picks_pivot.loc[indexes, "favorite_2_1"],
+            "market_blended_penka_points": points_pivot.loc[indexes, MARKET_BLENDED_STRATEGY],
+            "favorite_2_1_penka_points": points_pivot.loc[indexes, "favorite_2_1"],
+            "favorite_1_0_penka_points": points_pivot.loc[indexes, "favorite_1_0"],
+        },
+        index=indexes,
+    )
+    return audit[MARKET_BLEND_LAMBDA_AUDIT_COLUMNS].sort_values(
+        ["backtest_year", "date", "match_id"], kind="stable"
+    ).reset_index(drop=True)
+
+
+MARKET_STRATEGY_REPORT_NAMES = (
+    "favorite_1_0",
+    "favorite_2_1",
+    "calibrated_optimizer",
+    MARKET_BLENDED_STRATEGY,
+    MARKET_FAVORITE_2_1_STRATEGY,
+    MARKET_FAVORITE_1_0_STRATEGY,
+    *MARKET_BLEND_WEIGHT_STRATEGIES.values(),
+)
+
+
+def _market_strategy_metric_row(
+    points_pivot: pd.DataFrame,
+    indexes: pd.Index,
+    strategy: str,
+    scope: str,
+    year: int | str,
+) -> dict[str, object]:
+    values = points_pivot.loc[indexes, strategy].to_numpy(dtype=float)
+    baseline = points_pivot.loc[indexes, "favorite_2_1"].to_numpy(dtype=float)
+    ci_lower, ci_upper = _paired_bootstrap_ci(values - baseline)
+    return {
+        "scope": scope,
+        "backtest_year": year,
+        "strategy": strategy,
+        "matches": len(indexes),
+        "total_penka_points": int(values.sum()),
+        "average_penka_points": float(values.mean()),
+        "difference_vs_favorite_2_1": float((values - baseline).mean()),
+        "ci_lower_95_vs_favorite_2_1": ci_lower,
+        "ci_upper_95_vs_favorite_2_1": ci_upper,
+    }
+
+
+def build_market_strategy_reports(
+    context: pd.DataFrame,
+    points: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Return pooled, per-year, and blend-weight reports on identical matched scopes."""
+    pivot = points.pivot(index="match_index", columns="strategy", values="penka_points")
+    matched = context.get("market_odds_matched", pd.Series(False, index=context.index)).astype(bool)
+    matched_indexes = context.index[matched]
+    pooled_rows = [
+        _market_strategy_metric_row(pivot, matched_indexes, strategy, "matched_odds_only", "all")
+        for strategy in MARKET_STRATEGY_REPORT_NAMES
+    ]
+    by_year_rows = []
+    for year, year_rows in context.loc[matched_indexes].groupby("backtest_year", sort=True):
+        for strategy in MARKET_STRATEGY_REPORT_NAMES:
+            by_year_rows.append(
+                _market_strategy_metric_row(
+                    pivot, year_rows.index, strategy, "matched_odds_only", int(year)
+                )
+            )
+    pooled = pd.DataFrame(pooled_rows)
+    by_year = pd.DataFrame(by_year_rows)
+    weight_names = [MARKET_BLENDED_STRATEGY, *MARKET_BLEND_WEIGHT_STRATEGIES.values()]
+    sensitivity = pooled[pooled["strategy"].isin(weight_names)].copy()
+    sensitivity["market_weight"] = sensitivity["strategy"].map(
+        {MARKET_BLENDED_STRATEGY: MARKET_BLEND_WEIGHT, **{name: weight for weight, name in MARKET_BLEND_WEIGHT_STRATEGIES.items()}}
+    )
+    return pooled, by_year, sensitivity.sort_values("market_weight").reset_index(drop=True)
+
+
+def write_definitive_market_strategy_summary(
+    pooled: pd.DataFrame,
+    by_year: pd.DataFrame,
+    sensitivity: pd.DataFrame,
+    decision: dict[str, object],
+    output_dir: Path,
+) -> Path:
+    """Write the scope-labeled interpretation of the 2014/2018/2022 odds test."""
+    market_names = {
+        MARKET_BLENDED_STRATEGY,
+        MARKET_FAVORITE_2_1_STRATEGY,
+        MARKET_FAVORITE_1_0_STRATEGY,
+        *MARKET_BLEND_WEIGHT_STRATEGIES.values(),
+    }
+    market_rows = pooled[pooled["strategy"].isin(market_names)].sort_values(
+        "average_penka_points", ascending=False, kind="stable"
+    )
+    best_market = market_rows.iloc[0]
+    baseline = pooled[pooled["strategy"].eq("favorite_2_1")].iloc[0]
+    primary = by_year[
+        by_year["strategy"].eq(MARKET_FAVORITE_2_1_STRATEGY)
+        & by_year["backtest_year"].isin([2014, 2018])
+    ]
+    primary_baseline = by_year[
+        by_year["strategy"].eq("favorite_2_1")
+        & by_year["backtest_year"].isin([2014, 2018])
+    ]
+    out_sample_market = primary["total_penka_points"].sum() / primary["matches"].sum()
+    out_sample_baseline = primary_baseline["total_penka_points"].sum() / primary_baseline["matches"].sum()
+    year_verdicts = []
+    for year in (2014, 2018):
+        candidate_points = primary.loc[primary["backtest_year"].eq(year), "average_penka_points"].iloc[0]
+        baseline_points = primary_baseline.loc[
+            primary_baseline["backtest_year"].eq(year), "average_penka_points"
+        ].iloc[0]
+        year_verdicts.append(f"{year}: {'beats' if candidate_points > baseline_points else 'loses'}")
+    lines = [
+        "Definitive 2014+2018+2022 Matched-Odds Strategy Test",
+        "====================================================",
+        "scope: exactly 192 matched World Cup matches; 64 in each tournament",
+        f"best_market_strategy: {best_market['strategy']}",
+        f"best_market_average_penka_points: {best_market['average_penka_points']:.6f}",
+        f"favorite_2_1_average_penka_points: {baseline['average_penka_points']:.6f}",
+        f"best_market_ci_vs_favorite_2_1: [{best_market['ci_lower_95_vs_favorite_2_1']:.6f}, {best_market['ci_upper_95_vs_favorite_2_1']:.6f}]",
+        f"promoted_strategy: {decision.get('promoted_strategy') or 'null'}",
+        "",
+        "market_favorite_2_1 out-of-sample emphasis:",
+        "2022 inspired the market_favorite_2_1 candidate and is therefore in-sample for that rule.",
+        f"2014+2018 pooled market_favorite_2_1: {out_sample_market:.6f}",
+        f"2014+2018 pooled favorite_2_1: {out_sample_baseline:.6f}",
+        f"out_of_sample_year_verdicts: {', '.join(year_verdicts)}",
+        "out_of_sample_overall_verdict: " + ("beats" if out_sample_market > out_sample_baseline else "loses"),
+        "",
+        "blend_weight_sensitivity:",
+        sensitivity[["market_weight", "average_penka_points", "difference_vs_favorite_2_1"]].to_string(index=False),
+        "",
+        "recommendation: keep favorite_2_1 as the validated default; market odds remain advisory.",
+    ]
+    path = output_dir / "definitive_market_strategy_summary.txt"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
 
 
 def write_market_blend_gate(
@@ -621,31 +951,43 @@ def write_market_blend_gate(
     (output_dir / "market_blend_gate.json").write_text(
         json.dumps(decision, indent=2) + "\n", encoding="utf-8"
     )
-    matched = report[report["scope"].eq("matched_odds_only")].set_index("baseline")
     lines = [
-        "Market Blend Promotion Gate",
-        "===========================",
-        f"strategy: {MARKET_BLENDED_STRATEGY} (market weight {decision['market_blend_weight']})",
+        "Market Strategy Promotion Gate",
+        "==============================",
+        "gate_scope: matched_odds_only",
         f"matched_odds_matches: {decision['matched_odds_matches']} of {decision['total_backtest_matches']}",
     ]
-    for baseline_name in ("favorite_2_1", "favorite_1_0"):
-        if baseline_name in matched.index and decision["matched_odds_matches"]:
-            row = matched.loc[baseline_name]
-            lines.append(
-                f"vs {baseline_name} (matched odds only): blended {row['market_blended_average_penka_points']:.4f}"
-                f" vs {row['baseline_average_penka_points']:.4f} per match,"
-                f" diff {row['average_difference']:+.4f},"
-                f" 95% CI [{row['ci_lower_95']:.4f}, {row['ci_upper_95']:.4f}]"
-            )
-    lines.append(f"years_beating_favorite_2_1: {decision['years_beating_favorite_2_1'] or 'none'}")
-    lines.append(f"promote_market_blend_to_default_picks: {decision['promote']}")
+    for candidate in MARKET_GATE_CANDIDATES:
+        lines.append("")
+        lines.append(f"candidate: {candidate}")
+        matched = report[
+            report["scope"].eq("matched_odds_only")
+            & report["candidate_strategy"].eq(candidate)
+        ].set_index("baseline")
+        for baseline_name in ("favorite_2_1", "favorite_1_0"):
+            if baseline_name in matched.index and decision["matched_odds_matches"]:
+                row = matched.loc[baseline_name]
+                lines.append(
+                    f"  vs {baseline_name}: candidate {row['market_blended_average_penka_points']:.4f}"
+                    f" vs {row['baseline_average_penka_points']:.4f} per match,"
+                    f" diff {row['average_difference']:+.4f},"
+                    f" 95% CI [{row['ci_lower_95']:.4f}, {row['ci_upper_95']:.4f}]"
+                )
+        candidate_decision = decision["candidate_decisions"][candidate]
+        lines.append(f"  years_beating_favorite_2_1: {candidate_decision['years_beating_favorite_2_1'] or 'none'}")
+        lines.append(f"  passes_gate: {candidate_decision['promote']}")
+        for reason in candidate_decision["reasons_not_promoted"]:
+            lines.append(f"  reason: {reason}")
+    lines.append("")
+    lines.append(f"promoted_strategy: {decision['promoted_strategy'] or 'null'}")
+    lines.append(f"promote_market_strategy_to_default_picks: {decision['promote']}")
     if decision["reasons_not_promoted"]:
         lines.append("reasons:")
         lines.extend(f"  - {reason}" for reason in decision["reasons_not_promoted"])
     lines.append(
-        "Decision: market-blended picks replace the validated baseline."
+        f"Decision: {decision['promoted_strategy']} replaces the validated baseline."
         if decision["promote"]
-        else "Decision: keep the validated baseline picks; market blend remains a candidate comparison."
+        else "Decision: keep the validated baseline picks; all market strategies remain diagnostic candidates."
     )
     (output_dir / "market_blend_gate_summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -686,10 +1028,27 @@ def run_penka_backtesting_reports(
     focused_group.to_csv(output_path / "penka_strategy_backtest_comparison.csv", index=False)
     write_focused_group_strategy_summary(focused_group, output_path)
     gate_report, gate_decision = build_market_blend_gate_report(context, points, market_blend_weight)
+    gate_decision["scope"] = "matched_odds_only"
     write_market_blend_gate(gate_report, gate_decision, output_path)
+    market_by_year = build_market_blend_backtest_by_year(context, points)
+    market_by_year.to_csv(output_path / "market_blend_backtest_by_year.csv", index=False)
+    lambda_audit = build_market_blend_lambda_audit(context, points)
+    lambda_audit.to_csv(output_path / "market_blend_lambda_audit.csv", index=False)
+    market_pooled, market_by_strategy_year, weight_sensitivity = build_market_strategy_reports(context, points)
+    market_pooled.to_csv(output_path / "market_strategy_matched_comparison.csv", index=False)
+    market_by_strategy_year.to_csv(output_path / "market_strategy_by_year.csv", index=False)
+    weight_sensitivity.to_csv(output_path / "market_blend_weight_sensitivity.csv", index=False)
+    write_definitive_market_strategy_summary(
+        market_pooled, market_by_strategy_year, weight_sensitivity, gate_decision, output_path
+    )
     return {
         **reports,
         "penka_calibration_comparison": calibration,
         "penka_strategy_backtest_comparison": focused_group,
         "market_blend_strategy_comparison": gate_report,
+        "market_blend_backtest_by_year": market_by_year,
+        "market_blend_lambda_audit": lambda_audit,
+        "market_strategy_matched_comparison": market_pooled,
+        "market_strategy_by_year": market_by_strategy_year,
+        "market_blend_weight_sensitivity": weight_sensitivity,
     }

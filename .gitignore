@@ -24,5 +24,11 @@ data/processed/*
 # Manual odds-entry working sheets
 data/odds_entry/
 
+# API-derived odds snapshots are local runtime data
+data/raw/odds_snapshots/
+data/raw/futures_odds.csv
+data/raw/historical_match_odds_2022.csv
+data/raw/odds_pages_cache/
+
 # Pytest local temp dir
 .pytest_tmp/

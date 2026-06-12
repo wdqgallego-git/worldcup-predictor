@@ -7,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from market_blend import select_promoted_market_prediction
+
 
 PICK_SHEET_COLUMNS = [
     "match_id", "group", "date", "time", "team_a", "team_b",
@@ -44,7 +46,6 @@ def build_pick_sheet(predictions: pd.DataFrame, gate: dict[str, object]) -> pd.D
     promotion gate passed AND the match actually has usable odds; everything else
     keeps the validated baseline pick.
     """
-    promote = bool(gate.get("promote"))
     sheet = predictions.copy()
     if "has_market_odds" not in sheet.columns:
         sheet["has_market_odds"] = False
@@ -60,13 +61,13 @@ def build_pick_sheet(predictions: pd.DataFrame, gate: dict[str, object]) -> pd.D
     sheet["odds_freshness"] = [freshness for _, freshness in badges]
     sheet["model_prediction"] = sheet["safe_prediction"]
     sheet["model_expected_points"] = sheet["expected_penka_points"]
-    use_blend = promote & sheet["has_market_odds"].astype(bool)
+    use_blend, promoted_prediction, promoted_strategy = select_promoted_market_prediction(sheet, gate)
     sheet["recommended_prediction"] = np.where(
-        use_blend, sheet["market_blended_prediction"], sheet["model_prediction"]
+        use_blend, promoted_prediction, sheet["model_prediction"]
     )
     sheet["recommendation_source"] = np.where(
         use_blend,
-        "market_blend_promoted_by_backtest_gate",
+        f"{promoted_strategy}_promoted_by_backtest_gate" if promoted_strategy else "market_strategy_promoted",
         np.where(
             sheet["has_market_odds"].astype(bool),
             "validated_baseline (market blend shown as candidate; gate not passed)",

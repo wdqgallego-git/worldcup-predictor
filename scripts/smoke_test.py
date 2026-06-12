@@ -22,6 +22,8 @@ from data_loader import (
 )
 from features import build_fixture_features, build_training_table
 from model import predict_expected_goals, train_goal_models
+from knockout_advance import calculate_tied_advance_probability, resolve_knockout_advance
+from odds_priors import run_optional_odds_diagnostics, validate_odds_priors_sanity
 from player_data import (
     build_player_feature_table,
     load_goalkeeper_stats,
@@ -34,6 +36,7 @@ from player_data import (
 from poisson import score_probability_matrix
 from prediction_optimizer import summarize_match_strategy
 from penka_scoring import GROUP, QUARTER_FINAL, ROUND_OF_32, score_prediction, validate_penka_scoring_examples
+from score_pmf_backends import validate_score_pmf_backends
 from tournament_simulator import (
     assign_third_placed_teams_to_bracket,
     run_tournament_simulation,
@@ -63,6 +66,7 @@ def validate_scoring_rules() -> None:
 def validate_penka_match_scoring() -> None:
     """Prove phase scoring, draw handling, and optimizer recommendation caps."""
     validate_penka_scoring_examples()
+    validate_score_pmf_backends()
     if score_prediction(1, 1, 0, 0, GROUP) != 3:
         raise AssertionError("Non-exact group draw must score goal-difference/draw points.")
     if score_prediction(1, 0, 2, 0, ROUND_OF_32) != 3:
@@ -81,8 +85,8 @@ def validate_non_champion_golden_glove_path() -> None:
     """Prove the Golden Glove heuristic can select a non-champion keeper."""
     team_paths = pd.DataFrame(
         [
-            {"simulation_id": 1, "team": "Champion", "matches_played": 8, "clean_sheets": 0, "finish_rank": 1},
-            {"simulation_id": 1, "team": "Runner-up", "matches_played": 8, "clean_sheets": 8, "finish_rank": 2},
+            {"simulation_id": 1, "team": "Champion", "matches_played": 8, "goals_against": 8, "clean_sheets": 0, "finish_rank": 1},
+            {"simulation_id": 1, "team": "Runner-up", "matches_played": 8, "goals_against": 0, "clean_sheets": 8, "finish_rank": 2},
         ]
     )
     keepers = pd.DataFrame(
@@ -94,6 +98,33 @@ def validate_non_champion_golden_glove_path() -> None:
     winner = score_golden_glove_candidates(team_paths, keepers).iloc[0]
     if winner["team"] != "Runner-up":
         raise AssertionError("Golden Glove heuristic incorrectly auto-selected the champion keeper.")
+
+
+def validate_knockout_advance_model() -> None:
+    """Prove regulation results, tied fallback clamps, and seeded advancement."""
+    strengths = {"Favorite": 3.0, "Underdog": 0.0}
+    if resolve_knockout_advance("Favorite", "Underdog", 2, 1, strengths, np.random.default_rng(7)) != "Favorite":
+        raise AssertionError("Regulation winner did not advance.")
+    if resolve_knockout_advance("Favorite", "Underdog", 0, 1, strengths, np.random.default_rng(7)) != "Underdog":
+        raise AssertionError("Regulation loser incorrectly advanced.")
+    details = calculate_tied_advance_probability("Favorite", "Underdog", strengths)
+    if details["probability_team_a_advances"] != 0.58:
+        raise AssertionError("Conservative tied advancement fallback was not clamped to 0.58.")
+    prior_details = calculate_tied_advance_probability(
+        "Favorite",
+        "Underdog",
+        {"Favorite": 0.0, "Underdog": 0.0},
+        params={"shootout_priors": {"Favorite": 3.0, "Underdog": 0.0}},
+    )
+    if (
+        prior_details["tie_resolution_mode"] != "team_specific_shootout_priors"
+        or prior_details["probability_team_a_advances"] <= 0.58
+    ):
+        raise AssertionError("Explicit shootout priors did not activate the optional team-specific resolver.")
+    first = resolve_knockout_advance("Favorite", "Underdog", 1, 1, strengths, np.random.default_rng(2026))
+    second = resolve_knockout_advance("Favorite", "Underdog", 1, 1, strengths, np.random.default_rng(2026))
+    if first != second:
+        raise AssertionError("Seeded knockout advancement is not reproducible.")
 
 
 def validate_official_matrix_contract() -> pd.DataFrame:
@@ -122,7 +153,9 @@ def main() -> None:
     validate_2026_format()
     validate_scoring_rules()
     validate_penka_match_scoring()
+    validate_odds_priors_sanity()
     validate_non_champion_golden_glove_path()
+    validate_knockout_advance_model()
     third_place_matrix = validate_official_matrix_contract()
 
     results = load_results()
@@ -151,7 +184,12 @@ def main() -> None:
         rng=np.random.default_rng(2026),
     )
     tournament_paths.insert(0, "simulation_id", 1)
-    if len(tournament_paths) != 48 or int(tournament_paths["champion"].sum()) != 1:
+    if (
+        len(tournament_paths) != 48
+        or int(tournament_paths["champion"].sum()) != 1
+        or int(tournament_paths["runner_up"].sum()) != 1
+        or bool((tournament_paths["champion"] & tournament_paths["runner_up"]).any())
+    ):
         raise AssertionError("Tiny 2026-style tournament simulation failed.")
 
     players = load_players()
@@ -188,6 +226,7 @@ def main() -> None:
     ]
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     fixture_predictions[output_columns].to_csv(OUTPUT_PATH, index=False)
+    run_optional_odds_diagnostics(output_dir=OUTPUT_PATH.parent)
     print("Smoke test passed")
 
 

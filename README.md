@@ -62,6 +62,26 @@ python scripts/fetch_odds_historical.py
 python scripts/run_backtest.py
 ```
 
+BALLDONTLIE is usable for current 2026 match odds and tournament futures during
+the GOAT-tier trial. It is not usable for the 2018/2022 historical promotion gate:
+season-wide and per-match probes confirmed on June 11, 2026 that those odds were
+not backfilled. Fetch a current advisory snapshot with:
+
+```powershell
+python scripts/fetch_2026_odds_snapshot.py
+```
+
+`market_blended_optimizer` therefore remains candidate-only. The documented
+fallback is manual entry of sourced 2018/2022 closing 1X2 lines into
+`data/raw/historical_match_odds.csv`; its existing schema and loader accept those
+rows without changing the gate criteria.
+
+Current 2026 odds are advisory live information only. They cannot validate
+promotion because match outcomes are not known yet. API-populated
+`data/raw/match_odds.csv`, `data/raw/futures_odds.csv`, and
+`data/raw/odds_snapshots/` are local data artifacts and must not be committed
+unless explicitly reviewed and requested.
+
 Config knobs (environment variables or `.env`): `MARKET_BLEND_ENABLED`,
 `MARKET_BLEND_WEIGHT` (default 0.5), `SCORE_PMF_METHOD` (`independent` or
 `dixon_coles`), `DEVELOPMENT_MODE`.

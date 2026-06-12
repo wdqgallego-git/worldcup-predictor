@@ -117,6 +117,31 @@ class TestSingleMatchReoptimization:
         assert result["market_blend_promoted"] is True
         assert result["recommended_prediction"] == result["market_blended_prediction"]
 
+    @pytest.mark.parametrize(
+        ("promoted_strategy", "expected_prediction"),
+        [
+            ("market_favorite_2_1", "2-1"),
+            ("market_favorite_1_0", "1-0"),
+        ],
+    )
+    def test_reoptimize_honors_promoted_fixed_market_strategy(
+        self, workspace, promoted_strategy, expected_prediction
+    ):
+        gate_path = workspace["dir"] / "market_blend_gate.json"
+        gate_path.write_text(
+            json.dumps({"promote": True, "promoted_strategy": promoted_strategy}),
+            encoding="utf-8",
+        )
+        result = reoptimize_single_match(
+            1,
+            odds_path=workspace["odds"],
+            predictions_path=workspace["predictions"],
+            gate_path=gate_path,
+            now=FAKE_NOW,
+        )
+        assert result["promoted_strategy"] == promoted_strategy
+        assert result["recommended_prediction"] == expected_prediction
+
     def test_match_without_odds_falls_back_to_model_pick(self, workspace):
         result = reoptimize_single_match(
             2,

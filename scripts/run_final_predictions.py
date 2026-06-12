@@ -33,7 +33,12 @@ from data_loader import load_fixtures, load_rankings, load_results
 from download_data import download_all
 from evaluation import add_baseline_predictions
 from features import build_fixture_features, build_training_table
-from market_blend import MARKET_PREDICTION_COLUMNS, apply_market_prior, load_market_consensus
+from market_blend import (
+    MARKET_PREDICTION_COLUMNS,
+    apply_market_prior,
+    load_market_consensus,
+    select_promoted_market_prediction,
+)
 from model import predict_expected_goals, train_goal_models
 from odds_priors import load_market_blend_gate
 from pick_sheet import build_pick_sheet, write_pick_sheet
@@ -275,19 +280,25 @@ def build_final_recommendations(
         f"{int(pred_a)}-{int(pred_b)}" for pred_a, pred_b in zip(favorite["pred_a"], favorite["pred_b"])
     ]
     has_market_odds = predictions.get("has_market_odds", pd.Series(False, index=predictions.index)).astype(bool)
-    promoted = bool(gate.get("promote")) & has_market_odds
+    promoted, promoted_prediction, promoted_strategy = select_promoted_market_prediction(predictions, gate)
     recommendations["market_blended_prediction"] = predictions.get("market_blended_prediction", np.nan)
+    recommendations["market_favorite_2_1_prediction"] = predictions.get(
+        "market_favorite_2_1_prediction", np.nan
+    )
+    recommendations["market_favorite_1_0_prediction"] = predictions.get(
+        "market_favorite_1_0_prediction", np.nan
+    )
     recommendations["has_market_odds"] = has_market_odds.to_numpy()
     recommendations["market_blend_promoted"] = promoted.to_numpy()
     recommendations["recommended_strategy"] = np.where(
-        promoted, "market_blended_prior_promoted_by_backtest_gate", recommended_strategy
+        promoted, promoted_strategy or "market_strategy_promoted_by_backtest_gate", recommended_strategy
     )
     recommendations["recommended_prediction"] = np.where(
-        promoted, recommendations["market_blended_prediction"], recommendations["safe_prediction"]
+        promoted, promoted_prediction, recommendations["safe_prediction"]
     )
     recommendations["recommendation_reason"] = np.where(
         promoted,
-        "Market-blended pick: the blend beat favorite_2_1 and favorite_1_0 in the gated backtest.",
+        f"{promoted_strategy}: passed every unchanged matched-odds promotion criterion.",
         reason,
     )
     recommendations["refresh_required_before_match"] = True
