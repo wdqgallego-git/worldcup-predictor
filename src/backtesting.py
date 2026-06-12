@@ -52,6 +52,28 @@ WORLD_CUP_BACKTESTS = {
     2022: "2022-11-20",
 }
 
+EURO_KNOCKOUT_PHASES = [ROUND_OF_16] * 8 + [QUARTER_FINAL] * 4 + [SEMI_FINAL] * 2 + [FINAL]
+COPA_KNOCKOUT_PHASES = [QUARTER_FINAL] * 4 + [SEMI_FINAL] * 2 + [THIRD_PLACE, FINAL]
+# Group-stage counts are format facts per edition; totals are asserted against results.csv.
+EXPANDED_TOURNAMENT_BACKTESTS = [
+    {"label": "copa_2015", "tournament": "Copa América", "year": 2015, "cutoff": "2015-06-11",
+     "tournament_type": "copa_america", "group_matches": 18, "knockout_phases": COPA_KNOCKOUT_PHASES},
+    {"label": "copa_2016", "tournament": "Copa América", "year": 2016, "cutoff": "2016-06-03",
+     "tournament_type": "copa_america", "group_matches": 24, "knockout_phases": COPA_KNOCKOUT_PHASES},
+    {"label": "euro_2016", "tournament": "UEFA Euro", "year": 2016, "cutoff": "2016-06-10",
+     "tournament_type": "euro", "group_matches": 36, "knockout_phases": EURO_KNOCKOUT_PHASES},
+    {"label": "copa_2019", "tournament": "Copa América", "year": 2019, "cutoff": "2019-06-14",
+     "tournament_type": "copa_america", "group_matches": 18, "knockout_phases": COPA_KNOCKOUT_PHASES},
+    {"label": "copa_2021", "tournament": "Copa América", "year": 2021, "cutoff": "2021-06-13",
+     "tournament_type": "copa_america", "group_matches": 20, "knockout_phases": COPA_KNOCKOUT_PHASES},
+    {"label": "euro_2021", "tournament": "UEFA Euro", "year": 2021, "cutoff": "2021-06-11",
+     "tournament_type": "euro", "group_matches": 36, "knockout_phases": EURO_KNOCKOUT_PHASES},
+    {"label": "euro_2024", "tournament": "UEFA Euro", "year": 2024, "cutoff": "2024-06-14",
+     "tournament_type": "euro", "group_matches": 36, "knockout_phases": EURO_KNOCKOUT_PHASES},
+    {"label": "copa_2024", "tournament": "Copa América", "year": 2024, "cutoff": "2024-06-20",
+     "tournament_type": "copa_america", "group_matches": 24, "knockout_phases": COPA_KNOCKOUT_PHASES},
+]
+
 FAVORITE_WIN_PROBABILITY_THRESHOLDS = np.round(np.arange(0.45, 0.751, 0.05), 2)
 EXPECTED_GOAL_DIFFERENCE_THRESHOLDS = [0.2, 0.5, 0.8, 1.1, 1.5]
 DRAW_PROBABILITY_THRESHOLDS = [0.25, 0.30, 0.35, 0.40]
@@ -84,6 +106,26 @@ def historical_world_cup_matches(results: pd.DataFrame, year: int) -> pd.DataFra
         world_cup.loc[unknown, "penka_phase"] = np.asarray(old_format_phases, dtype=object)[unknown]
         world_cup.loc[unknown, "penka_phase_source"] = "known_32_team_world_cup_sequence"
     return world_cup
+
+
+def historical_tournament_matches(results: pd.DataFrame, spec: dict[str, object]) -> pd.DataFrame:
+    """Return one historical tournament with phases assigned from its known format."""
+    matches = prepare_match_table(results)
+    tournament = matches["tournament"].fillna("").astype(str)
+    selected = matches[
+        (matches["date"].dt.year == int(spec["year"])) & tournament.eq(str(spec["tournament"]))
+    ].copy()
+    phase_sequence = [GROUP] * int(spec["group_matches"]) + list(spec["knockout_phases"])
+    if len(selected) != len(phase_sequence):
+        raise ValueError(
+            f"{spec['label']}: expected {len(phase_sequence)} matches "
+            f"({spec['group_matches']} group + {len(spec['knockout_phases'])} knockout); "
+            f"found {len(selected)} in results.csv."
+        )
+    selected = selected.sort_values("date", kind="stable").reset_index(drop=True)
+    selected["penka_phase"] = np.asarray(phase_sequence, dtype=object)
+    selected["penka_phase_source"] = f"known_{spec['tournament_type']}_format_sequence"
+    return selected
 
 
 def add_optimized_score_predictions(
@@ -173,12 +215,20 @@ def run_match_backtest(
     results: pd.DataFrame | None = None,
     rankings: pd.DataFrame | None = None,
     max_goals: int = 6,
+    tournament_matches: pd.DataFrame | None = None,
+    backtest_label: str | None = None,
+    tournament_type: str = "world_cup",
 ) -> dict[str, object]:
-    """Train before cutoff and backtest score predictions on one World Cup."""
+    """Train before cutoff and backtest score predictions on one tournament.
+
+    Defaults reproduce the original World Cup behavior; pass tournament_matches
+    (from historical_tournament_matches) to backtest Euros or Copas instead.
+    """
     results = load_results() if results is None else results.copy()
     rankings = load_rankings() if rankings is None else rankings.copy()
     cutoff = pd.Timestamp(cutoff_date)
-    tournament_matches = historical_world_cup_matches(results, year)
+    if tournament_matches is None:
+        tournament_matches = historical_world_cup_matches(results, year)
     if (tournament_matches["date"] < cutoff).any():
         raise ValueError(f"{year} cutoff {cutoff.date()} is after at least one tournament match.")
 
@@ -187,6 +237,9 @@ def run_match_backtest(
     fixture_features, _ = build_fixture_features(tournament_matches, results, rankings, feature_cols)
     predictions = add_raw_lambda_columns(predict_expected_goals(models, fixture_features))
     predictions["backtest_year"] = year
+    predictions["backtest_label"] = backtest_label or f"wc_{year}"
+    predictions["tournament_type"] = tournament_type
+    predictions["training_cutoff"] = str(cutoff.date())
     predictions["model_name"] = models["selected_model_name"]
     independent = add_optimized_score_predictions(predictions, method="independent", max_goals=max_goals)
     dixon_coles = add_optimized_score_predictions(predictions, method="dixon_coles", max_goals=max_goals)

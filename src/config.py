@@ -85,7 +85,10 @@ if not 0.0 <= MARKET_BLEND_WEIGHT <= 1.0:
     raise ValueError(f"MARKET_BLEND_WEIGHT must be between 0 and 1. Received: {MARKET_BLEND_WEIGHT}")
 
 # Score-probability backend used by the pick optimizer ("independent" or "dixon_coles").
-SCORE_PMF_METHOD = os.environ.get("SCORE_PMF_METHOD", "independent").strip() or "independent"
+# Default switched to dixon_coles after the 11-tournament expanded backtest
+# (outputs/expanded_strategy_decision.txt): it beat independent on the World Cup
+# (+0.083 pts/match), Euro (+0.084), and pooled (+0.045) group scopes.
+SCORE_PMF_METHOD = os.environ.get("SCORE_PMF_METHOD", "dixon_coles").strip() or "dixon_coles"
 
 MATCH_ODDS_PATH = "data/raw/match_odds.csv"
 FUTURES_ODDS_PATH = "data/raw/futures_odds.csv"
