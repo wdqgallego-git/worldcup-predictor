@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10231b">
+  <title>Penka Match Desk</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-lockup">
+      <span class="brand-mark">P</span>
+      <div>
+        <p class="eyebrow">World Cup 2026</p>
+        <h1>Penka Match Desk</h1>
+      </div>
+    </div>
+    <button id="rebuildButton" class="icon-button" type="button" title="Rebuild dashboard data" aria-label="Rebuild dashboard data">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="strategy-band" aria-label="Strategy status">
+      <div class="strategy-main">
+        <p class="section-label">Submission strategy</p>
+        <div class="strategy-name"><span id="strategyName">favorite 2-1</span><span class="status-dot"></span></div>
+        <p><strong id="strategyPoints">1.80</strong> pts/match on WC backtest</p>
+      </div>
+      <div class="metric-grid">
+        <div><strong id="freshOddsCount">0</strong><span>Fresh odds</span><small>≤6h</small></div>
+        <div><strong id="staleOddsCount">0</strong><span>Stale / no odds</span></div>
+        <div><strong id="disagreementCount">0</strong><span>Market disagrees</span></div>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="Match filters">
+      <label class="search-box">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="teamSearch" type="search" placeholder="Search teams" autocomplete="off">
+      </label>
+      <div class="segment-control" role="group" aria-label="Date range">
+        <button class="segment active" data-window="all" type="button">All <span id="allCount">72</span></button>
+        <button class="segment" data-window="next3" type="button">Next 3 days</button>
+      </div>
+      <button id="disagreementFilter" class="filter-button" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.7 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0Z"/></svg>
+        Disagreements
+      </button>
+      <label class="group-select">
+        <span>Group</span>
+        <select id="groupFilter"><option value="all">All groups</option></select>
+      </label>
+    </section>
+
+    <section class="list-heading">
+      <div><p class="section-label">Group stage</p><h2 id="matchCountLabel">72 matches</h2></div>
+      <p id="generatedAt" class="updated-at"></p>
+    </section>
+    <section id="matchList" class="match-list" aria-live="polite"></section>
+    <div id="emptyState" class="empty-state" hidden>No matches fit these filters.</div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
