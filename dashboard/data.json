@@ -1,0 +1,1946 @@
+{
+  "generatedAt": "2026-06-23T02:16:34.168379+00:00",
+  "strategy": {
+    "name": "favorite 2-1",
+    "wcBacktestPoints": 1.799,
+    "contenderName": "live context",
+    "contenderWcBacktestPoints": 1.681,
+    "gatePromoted": false
+  },
+  "oddsFreshHours": 6,
+  "matches": [
+    {
+      "matchId": 1,
+      "date": "2026-06-11",
+      "time": "13:00 UTC-6",
+      "group": "A",
+      "teamA": "Mexico",
+      "teamB": "South Africa",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.802,
+      "marketProbabilities": null,
+      "bookmakerCount": 0,
+      "bookmakers": [],
+      "oddsCapturedAt": null,
+      "hasOdds": false,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 2,
+      "date": "2026-06-11",
+      "time": "20:00 UTC-6",
+      "group": "A",
+      "teamA": "South Korea",
+      "teamB": "Czechia",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.458,
+      "marketProbabilities": [
+        36.2,
+        31.4,
+        32.4
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 7,
+      "date": "2026-06-12",
+      "time": "15:00 UTC-4",
+      "group": "B",
+      "teamA": "Canada",
+      "teamB": "Bosnia and Herzegovina",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.77,
+      "marketProbabilities": [
+        53.2,
+        26.5,
+        20.3
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 19,
+      "date": "2026-06-12",
+      "time": "18:00 UTC-7",
+      "group": "D",
+      "teamA": "United States",
+      "teamB": "Paraguay",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.564,
+      "marketProbabilities": [
+        50.4,
+        27.5,
+        22.1
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 8,
+      "date": "2026-06-13",
+      "time": "12:00 UTC-7",
+      "group": "B",
+      "teamA": "Qatar",
+      "teamB": "Switzerland",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-2",
+      "contenderExpectedPoints": 1.673,
+      "marketProbabilities": [
+        5.7,
+        13.6,
+        80.6
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 13,
+      "date": "2026-06-13",
+      "time": "18:00 UTC-4",
+      "group": "C",
+      "teamA": "Brazil",
+      "teamB": "Morocco",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.317,
+      "marketProbabilities": [
+        58.5,
+        24.8,
+        16.7
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 14,
+      "date": "2026-06-13",
+      "time": "21:00 UTC-4",
+      "group": "C",
+      "teamA": "Haiti",
+      "teamB": "Scotland",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.472,
+      "marketProbabilities": [
+        15.6,
+        22.2,
+        62.3
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 20,
+      "date": "2026-06-13",
+      "time": "21:00 UTC-7",
+      "group": "D",
+      "teamA": "Australia",
+      "teamB": "Turkey",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.228,
+      "marketProbabilities": [
+        17.4,
+        24.8,
+        57.8
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 25,
+      "date": "2026-06-14",
+      "time": "12:00 UTC-5",
+      "group": "E",
+      "teamA": "Germany",
+      "teamB": "Cura\u00e7ao",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 2.175,
+      "marketProbabilities": [
+        94.1,
+        4.5,
+        1.4
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 31,
+      "date": "2026-06-14",
+      "time": "15:00 UTC-5",
+      "group": "F",
+      "teamA": "Netherlands",
+      "teamB": "Japan",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.241,
+      "marketProbabilities": [
+        48.0,
+        26.5,
+        25.5
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 26,
+      "date": "2026-06-14",
+      "time": "19:00 UTC-4",
+      "group": "E",
+      "teamA": "Ivory Coast",
+      "teamB": "Ecuador",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.257,
+      "marketProbabilities": [
+        26.4,
+        33.5,
+        40.0
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 32,
+      "date": "2026-06-14",
+      "time": "20:00 UTC-6",
+      "group": "F",
+      "teamA": "Sweden",
+      "teamB": "Tunisia",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.241,
+      "marketProbabilities": [
+        51.1,
+        27.6,
+        21.3
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 43,
+      "date": "2026-06-15",
+      "time": "12:00 UTC-4",
+      "group": "H",
+      "teamA": "Spain",
+      "teamB": "Cape Verde",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 2.28,
+      "marketProbabilities": null,
+      "bookmakerCount": 0,
+      "bookmakers": [],
+      "oddsCapturedAt": null,
+      "hasOdds": false,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 37,
+      "date": "2026-06-15",
+      "time": "12:00 UTC-7",
+      "group": "G",
+      "teamA": "Belgium",
+      "teamB": "Egypt",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.701,
+      "marketProbabilities": [
+        59.4,
+        24.1,
+        16.6
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 44,
+      "date": "2026-06-15",
+      "time": "18:00 UTC-4",
+      "group": "H",
+      "teamA": "Saudi Arabia",
+      "teamB": "Uruguay",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.796,
+      "marketProbabilities": [
+        11.4,
+        20.6,
+        67.9
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 38,
+      "date": "2026-06-15",
+      "time": "18:00 UTC-7",
+      "group": "G",
+      "teamA": "Iran",
+      "teamB": "New Zealand",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.795,
+      "marketProbabilities": [
+        52.5,
+        27.3,
+        20.2
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 49,
+      "date": "2026-06-16",
+      "time": "15:00 UTC-4",
+      "group": "I",
+      "teamA": "France",
+      "teamB": "Senegal",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.618,
+      "marketProbabilities": [
+        66.2,
+        21.2,
+        12.6
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 50,
+      "date": "2026-06-16",
+      "time": "18:00 UTC-4",
+      "group": "I",
+      "teamA": "Iraq",
+      "teamB": "Norway",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.549,
+      "marketProbabilities": [
+        5.8,
+        12.7,
+        81.4
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 55,
+      "date": "2026-06-16",
+      "time": "20:00 UTC-5",
+      "group": "J",
+      "teamA": "Argentina",
+      "teamB": "Algeria",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.775,
+      "marketProbabilities": [
+        70.4,
+        19.8,
+        9.8
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 56,
+      "date": "2026-06-16",
+      "time": "21:00 UTC-7",
+      "group": "J",
+      "teamA": "Austria",
+      "teamB": "Jordan",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.671,
+      "marketProbabilities": [
+        74.1,
+        16.7,
+        9.3
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 61,
+      "date": "2026-06-17",
+      "time": "12:00 UTC-5",
+      "group": "K",
+      "teamA": "Portugal",
+      "teamB": "DR Congo",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.968,
+      "marketProbabilities": [
+        76.1,
+        16.1,
+        7.8
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 67,
+      "date": "2026-06-17",
+      "time": "15:00 UTC-5",
+      "group": "L",
+      "teamA": "England",
+      "teamB": "Croatia",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.426,
+      "marketProbabilities": [
+        56.0,
+        25.1,
+        18.9
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 68,
+      "date": "2026-06-17",
+      "time": "19:00 UTC-4",
+      "group": "L",
+      "teamA": "Ghana",
+      "teamB": "Panama",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.569,
+      "marketProbabilities": [
+        45.9,
+        27.6,
+        26.5
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 62,
+      "date": "2026-06-17",
+      "time": "20:00 UTC-6",
+      "group": "K",
+      "teamA": "Uzbekistan",
+      "teamB": "Colombia",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.687,
+      "marketProbabilities": [
+        10.0,
+        19.8,
+        70.2
+      ],
+      "bookmakerCount": 6,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "caesars",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 3,
+      "date": "2026-06-18",
+      "time": "12:00 UTC-4",
+      "group": "A",
+      "teamA": "Czechia",
+      "teamB": "South Africa",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.424,
+      "marketProbabilities": [
+        54.5,
+        26.3,
+        19.2
+      ],
+      "bookmakerCount": 5,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanatics",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 9,
+      "date": "2026-06-18",
+      "time": "12:00 UTC-7",
+      "group": "B",
+      "teamA": "Switzerland",
+      "teamB": "Bosnia and Herzegovina",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 1.94,
+      "marketProbabilities": [
+        60.7,
+        23.5,
+        15.8
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 10,
+      "date": "2026-06-18",
+      "time": "15:00 UTC-7",
+      "group": "B",
+      "teamA": "Canada",
+      "teamB": "Qatar",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.708,
+      "marketProbabilities": [
+        74.3,
+        17.7,
+        8.0
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 4,
+      "date": "2026-06-18",
+      "time": "19:00 UTC-6",
+      "group": "A",
+      "teamA": "Mexico",
+      "teamB": "South Korea",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.323,
+      "marketProbabilities": [
+        54.2,
+        26.5,
+        19.4
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 21,
+      "date": "2026-06-19",
+      "time": "12:00 UTC-7",
+      "group": "D",
+      "teamA": "United States",
+      "teamB": "Australia",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.182,
+      "marketProbabilities": [
+        54.8,
+        25.1,
+        20.1
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 15,
+      "date": "2026-06-19",
+      "time": "18:00 UTC-4",
+      "group": "C",
+      "teamA": "Scotland",
+      "teamB": "Morocco",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.586,
+      "marketProbabilities": [
+        22.8,
+        28.4,
+        48.8
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 22,
+      "date": "2026-06-19",
+      "time": "20:00 UTC-7",
+      "group": "D",
+      "teamA": "Turkey",
+      "teamB": "Paraguay",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.378,
+      "marketProbabilities": [
+        42.8,
+        29.5,
+        27.7
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 16,
+      "date": "2026-06-19",
+      "time": "20:30 UTC-4",
+      "group": "C",
+      "teamA": "Brazil",
+      "teamB": "Haiti",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 2.154,
+      "marketProbabilities": [
+        90.4,
+        6.9,
+        2.7
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 33,
+      "date": "2026-06-20",
+      "time": "12:00 UTC-5",
+      "group": "F",
+      "teamA": "Netherlands",
+      "teamB": "Sweden",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 1.702,
+      "marketProbabilities": [
+        58.6,
+        23.4,
+        18.0
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 27,
+      "date": "2026-06-20",
+      "time": "16:00 UTC-4",
+      "group": "E",
+      "teamA": "Germany",
+      "teamB": "Ivory Coast",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.603,
+      "marketProbabilities": [
+        62.6,
+        21.8,
+        15.6
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 28,
+      "date": "2026-06-20",
+      "time": "19:00 UTC-5",
+      "group": "E",
+      "teamA": "Ecuador",
+      "teamB": "Cura\u00e7ao",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 1.992,
+      "marketProbabilities": [
+        80.5,
+        13.3,
+        6.3
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 34,
+      "date": "2026-06-20",
+      "time": "22:00 UTC-6",
+      "group": "F",
+      "teamA": "Tunisia",
+      "teamB": "Japan",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.652,
+      "marketProbabilities": [
+        17.9,
+        26.3,
+        55.8
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 45,
+      "date": "2026-06-21",
+      "time": "12:00 UTC-4",
+      "group": "H",
+      "teamA": "Spain",
+      "teamB": "Saudi Arabia",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 2.076,
+      "marketProbabilities": [
+        87.8,
+        9.1,
+        3.1
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 39,
+      "date": "2026-06-21",
+      "time": "12:00 UTC-7",
+      "group": "G",
+      "teamA": "Belgium",
+      "teamB": "Iran",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.409,
+      "marketProbabilities": [
+        69.0,
+        20.0,
+        11.0
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 46,
+      "date": "2026-06-21",
+      "time": "18:00 UTC-4",
+      "group": "H",
+      "teamA": "Uruguay",
+      "teamB": "Cape Verde",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 1.99,
+      "marketProbabilities": null,
+      "bookmakerCount": 0,
+      "bookmakers": [],
+      "oddsCapturedAt": null,
+      "hasOdds": false,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 40,
+      "date": "2026-06-21",
+      "time": "18:00 UTC-7",
+      "group": "G",
+      "teamA": "New Zealand",
+      "teamB": "Egypt",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.468,
+      "marketProbabilities": [
+        18.7,
+        25.9,
+        55.3
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 57,
+      "date": "2026-06-22",
+      "time": "12:00 UTC-5",
+      "group": "J",
+      "teamA": "Argentina",
+      "teamB": "Austria",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.768,
+      "marketProbabilities": [
+        58.7,
+        24.5,
+        16.9
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 51,
+      "date": "2026-06-22",
+      "time": "17:00 UTC-4",
+      "group": "I",
+      "teamA": "France",
+      "teamB": "Iraq",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 2.04,
+      "marketProbabilities": [
+        86.7,
+        10.1,
+        3.2
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 52,
+      "date": "2026-06-22",
+      "time": "20:00 UTC-4",
+      "group": "I",
+      "teamA": "Norway",
+      "teamB": "Senegal",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.253,
+      "marketProbabilities": [
+        44.7,
+        27.3,
+        28.0
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 58,
+      "date": "2026-06-22",
+      "time": "20:00 UTC-7",
+      "group": "J",
+      "teamA": "Jordan",
+      "teamB": "Algeria",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.53,
+      "marketProbabilities": [
+        14.2,
+        22.6,
+        63.3
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 63,
+      "date": "2026-06-23",
+      "time": "12:00 UTC-5",
+      "group": "K",
+      "teamA": "Portugal",
+      "teamB": "Uzbekistan",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.838,
+      "marketProbabilities": [
+        77.5,
+        14.8,
+        7.6
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 69,
+      "date": "2026-06-23",
+      "time": "16:00 UTC-4",
+      "group": "L",
+      "teamA": "England",
+      "teamB": "Ghana",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 2.191,
+      "marketProbabilities": [
+        73.4,
+        17.2,
+        9.3
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 70,
+      "date": "2026-06-23",
+      "time": "19:00 UTC-4",
+      "group": "L",
+      "teamA": "Panama",
+      "teamB": "Croatia",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.542,
+      "marketProbabilities": [
+        13.9,
+        23.7,
+        62.4
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 64,
+      "date": "2026-06-23",
+      "time": "20:00 UTC-6",
+      "group": "K",
+      "teamA": "Colombia",
+      "teamB": "DR Congo",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.941,
+      "marketProbabilities": [
+        65.0,
+        22.6,
+        12.4
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 11,
+      "date": "2026-06-24",
+      "time": "12:00 UTC-7",
+      "group": "B",
+      "teamA": "Switzerland",
+      "teamB": "Canada",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.357,
+      "marketProbabilities": [
+        45.2,
+        28.0,
+        26.7
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 12,
+      "date": "2026-06-24",
+      "time": "12:00 UTC-7",
+      "group": "B",
+      "teamA": "Bosnia and Herzegovina",
+      "teamB": "Qatar",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.189,
+      "marketProbabilities": [
+        60.1,
+        24.2,
+        15.7
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 17,
+      "date": "2026-06-24",
+      "time": "18:00 UTC-4",
+      "group": "C",
+      "teamA": "Scotland",
+      "teamB": "Brazil",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.736,
+      "marketProbabilities": [
+        13.2,
+        19.9,
+        66.9
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 18,
+      "date": "2026-06-24",
+      "time": "18:00 UTC-4",
+      "group": "C",
+      "teamA": "Morocco",
+      "teamB": "Haiti",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 1.991,
+      "marketProbabilities": [
+        72.8,
+        18.1,
+        9.0
+      ],
+      "bookmakerCount": 4,
+      "bookmakers": [
+        "betmgm",
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 5,
+      "date": "2026-06-24",
+      "time": "19:00 UTC-6",
+      "group": "A",
+      "teamA": "Czechia",
+      "teamB": "Mexico",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.62,
+      "marketProbabilities": [
+        19.7,
+        26.6,
+        53.7
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 6,
+      "date": "2026-06-24",
+      "time": "19:00 UTC-6",
+      "group": "A",
+      "teamA": "South Africa",
+      "teamB": "South Korea",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.671,
+      "marketProbabilities": [
+        19.3,
+        26.0,
+        54.7
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 29,
+      "date": "2026-06-25",
+      "time": "16:00 UTC-4",
+      "group": "E",
+      "teamA": "Cura\u00e7ao",
+      "teamB": "Ivory Coast",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.742,
+      "marketProbabilities": [
+        6.3,
+        14.4,
+        79.3
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 30,
+      "date": "2026-06-25",
+      "time": "16:00 UTC-4",
+      "group": "E",
+      "teamA": "Ecuador",
+      "teamB": "Germany",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.292,
+      "marketProbabilities": [
+        19.1,
+        24.6,
+        56.3
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 35,
+      "date": "2026-06-25",
+      "time": "18:00 UTC-5",
+      "group": "F",
+      "teamA": "Japan",
+      "teamB": "Sweden",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.661,
+      "marketProbabilities": [
+        46.2,
+        27.5,
+        26.3
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 36,
+      "date": "2026-06-25",
+      "time": "18:00 UTC-5",
+      "group": "F",
+      "teamA": "Tunisia",
+      "teamB": "Netherlands",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.736,
+      "marketProbabilities": [
+        13.7,
+        21.6,
+        64.7
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 23,
+      "date": "2026-06-25",
+      "time": "19:00 UTC-7",
+      "group": "D",
+      "teamA": "Turkey",
+      "teamB": "United States",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-2",
+      "contenderExpectedPoints": 1.163,
+      "marketProbabilities": [
+        35.3,
+        27.0,
+        37.7
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 24,
+      "date": "2026-06-25",
+      "time": "19:00 UTC-7",
+      "group": "D",
+      "teamA": "Paraguay",
+      "teamB": "Australia",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.356,
+      "marketProbabilities": [
+        44.7,
+        28.8,
+        26.5
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 53,
+      "date": "2026-06-26",
+      "time": "15:00 UTC-4",
+      "group": "I",
+      "teamA": "Norway",
+      "teamB": "France",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.591,
+      "marketProbabilities": [
+        21.5,
+        25.8,
+        52.7
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 54,
+      "date": "2026-06-26",
+      "time": "15:00 UTC-4",
+      "group": "I",
+      "teamA": "Senegal",
+      "teamB": "Iraq",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-0",
+      "contenderExpectedPoints": 1.766,
+      "marketProbabilities": [
+        68.0,
+        20.6,
+        11.4
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 48,
+      "date": "2026-06-26",
+      "time": "18:00 UTC-6",
+      "group": "H",
+      "teamA": "Uruguay",
+      "teamB": "Spain",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.576,
+      "marketProbabilities": [
+        17.1,
+        24.0,
+        58.9
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 47,
+      "date": "2026-06-26",
+      "time": "19:00 UTC-5",
+      "group": "H",
+      "teamA": "Cape Verde",
+      "teamB": "Saudi Arabia",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.27,
+      "marketProbabilities": null,
+      "bookmakerCount": 0,
+      "bookmakers": [],
+      "oddsCapturedAt": null,
+      "hasOdds": false,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 41,
+      "date": "2026-06-26",
+      "time": "20:00 UTC-7",
+      "group": "G",
+      "teamA": "Egypt",
+      "teamB": "Iran",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.345,
+      "marketProbabilities": [
+        42.6,
+        30.9,
+        26.5
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 42,
+      "date": "2026-06-26",
+      "time": "20:00 UTC-7",
+      "group": "G",
+      "teamA": "New Zealand",
+      "teamB": "Belgium",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.841,
+      "marketProbabilities": [
+        8.4,
+        16.1,
+        75.5
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 71,
+      "date": "2026-06-27",
+      "time": "17:00 UTC-4",
+      "group": "L",
+      "teamA": "Panama",
+      "teamB": "England",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.815,
+      "marketProbabilities": [
+        9.1,
+        15.3,
+        75.6
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 72,
+      "date": "2026-06-27",
+      "time": "17:00 UTC-4",
+      "group": "L",
+      "teamA": "Croatia",
+      "teamB": "Ghana",
+      "recommended": "2-1",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "2-0",
+      "contenderExpectedPoints": 1.978,
+      "marketProbabilities": [
+        58.9,
+        24.6,
+        16.4
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 65,
+      "date": "2026-06-27",
+      "time": "19:30 UTC-4",
+      "group": "K",
+      "teamA": "Colombia",
+      "teamB": "Portugal",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.141,
+      "marketProbabilities": [
+        26.8,
+        28.3,
+        45.0
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 66,
+      "date": "2026-06-27",
+      "time": "19:30 UTC-4",
+      "group": "K",
+      "teamA": "DR Congo",
+      "teamB": "Uzbekistan",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-1",
+      "contenderExpectedPoints": 1.298,
+      "marketProbabilities": [
+        40.9,
+        29.2,
+        29.9
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    },
+    {
+      "matchId": 59,
+      "date": "2026-06-27",
+      "time": "21:00 UTC-5",
+      "group": "J",
+      "teamA": "Algeria",
+      "teamB": "Austria",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "1-1",
+      "contenderExpectedPoints": 1.105,
+      "marketProbabilities": [
+        26.7,
+        29.2,
+        44.2
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": false
+    },
+    {
+      "matchId": 60,
+      "date": "2026-06-27",
+      "time": "21:00 UTC-5",
+      "group": "J",
+      "teamA": "Jordan",
+      "teamB": "Argentina",
+      "recommended": "1-2",
+      "recommendedStrategy": "favorite_2_1_user_selected",
+      "contender": "0-2",
+      "contenderExpectedPoints": 2.016,
+      "marketProbabilities": [
+        5.3,
+        13.0,
+        81.6
+      ],
+      "bookmakerCount": 3,
+      "bookmakers": [
+        "betrivers",
+        "draftkings",
+        "fanduel"
+      ],
+      "oddsCapturedAt": "2026-06-11T20:41:03.941000+00:00",
+      "hasOdds": true,
+      "marketDisagrees": true
+    }
+  ]
+}
